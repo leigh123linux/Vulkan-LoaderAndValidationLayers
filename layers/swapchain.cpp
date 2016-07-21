@@ -36,7 +36,8 @@ static std::mutex global_lock;
 // The following is for logging error messages:
 static std::unordered_map<void *, layer_data *> layer_data_map;
 
-static const VkExtensionProperties instance_extensions[] = {{VK_EXT_DEBUG_REPORT_EXTENSION_NAME, VK_EXT_DEBUG_REPORT_SPEC_VERSION}};
+static const VkExtensionProperties instance_extensions[] = {{VK_EXT_DEBUG_REPORT_EXTENSION_NAME, VK_EXT_DEBUG_REPORT_SPEC_VERSION},
+                                                            {"VK_LUNARG_marky_instext", 1}};
 
 static const VkLayerProperties swapchain_layer = {
     "VK_LAYER_LUNARG_swapchain", VK_LAYER_API_VERSION, 1, "LunarG Validation Layer",

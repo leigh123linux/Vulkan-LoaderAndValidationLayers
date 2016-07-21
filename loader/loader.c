@@ -83,6 +83,8 @@ loader_platform_thread_mutex loader_json_lock;
 
 const char *std_validation_str = "VK_LAYER_LUNARG_standard_validation";
 
+LOADER_PLATFORM_THREAD_ONCE_DECLARATION(once_init);
+
 // This table contains the loader's instance dispatch table, which contains
 // default functions if no instance layers are activated.  This contains
 // pointers to "terminator functions".
@@ -92,72 +94,70 @@ const VkLayerInstanceDispatchTable instance_disp = {
     .EnumeratePhysicalDevices = terminator_EnumeratePhysicalDevices,
     .GetPhysicalDeviceFeatures = terminator_GetPhysicalDeviceFeatures,
     .GetPhysicalDeviceFormatProperties =
-        terminator_GetPhysicalDeviceFormatProperties,
+    terminator_GetPhysicalDeviceFormatProperties,
     .GetPhysicalDeviceImageFormatProperties =
-        terminator_GetPhysicalDeviceImageFormatProperties,
+    terminator_GetPhysicalDeviceImageFormatProperties,
     .GetPhysicalDeviceProperties = terminator_GetPhysicalDeviceProperties,
     .GetPhysicalDeviceQueueFamilyProperties =
-        terminator_GetPhysicalDeviceQueueFamilyProperties,
+    terminator_GetPhysicalDeviceQueueFamilyProperties,
     .GetPhysicalDeviceMemoryProperties =
-        terminator_GetPhysicalDeviceMemoryProperties,
+    terminator_GetPhysicalDeviceMemoryProperties,
     .EnumerateDeviceExtensionProperties =
-        terminator_EnumerateDeviceExtensionProperties,
+    terminator_EnumerateDeviceExtensionProperties,
     .EnumerateDeviceLayerProperties = terminator_EnumerateDeviceLayerProperties,
     .GetPhysicalDeviceSparseImageFormatProperties =
-        terminator_GetPhysicalDeviceSparseImageFormatProperties,
+    terminator_GetPhysicalDeviceSparseImageFormatProperties,
     .DestroySurfaceKHR = terminator_DestroySurfaceKHR,
     .GetPhysicalDeviceSurfaceSupportKHR =
-        terminator_GetPhysicalDeviceSurfaceSupportKHR,
+    terminator_GetPhysicalDeviceSurfaceSupportKHR,
     .GetPhysicalDeviceSurfaceCapabilitiesKHR =
-        terminator_GetPhysicalDeviceSurfaceCapabilitiesKHR,
+    terminator_GetPhysicalDeviceSurfaceCapabilitiesKHR,
     .GetPhysicalDeviceSurfaceFormatsKHR =
-        terminator_GetPhysicalDeviceSurfaceFormatsKHR,
+    terminator_GetPhysicalDeviceSurfaceFormatsKHR,
     .GetPhysicalDeviceSurfacePresentModesKHR =
-        terminator_GetPhysicalDeviceSurfacePresentModesKHR,
+    terminator_GetPhysicalDeviceSurfacePresentModesKHR,
     .CreateDebugReportCallbackEXT = terminator_CreateDebugReportCallback,
     .DestroyDebugReportCallbackEXT = terminator_DestroyDebugReportCallback,
     .DebugReportMessageEXT = terminator_DebugReportMessage,
 #ifdef VK_USE_PLATFORM_MIR_KHR
     .CreateMirSurfaceKHR = terminator_CreateMirSurfaceKHR,
     .GetPhysicalDeviceMirPresentationSupportKHR =
-        terminator_GetPhysicalDeviceMirPresentationSupportKHR,
+    terminator_GetPhysicalDeviceMirPresentationSupportKHR,
 #endif
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
     .CreateWaylandSurfaceKHR = terminator_CreateWaylandSurfaceKHR,
     .GetPhysicalDeviceWaylandPresentationSupportKHR =
-        terminator_GetPhysicalDeviceWaylandPresentationSupportKHR,
+    terminator_GetPhysicalDeviceWaylandPresentationSupportKHR,
 #endif
 #ifdef VK_USE_PLATFORM_WIN32_KHR
     .CreateWin32SurfaceKHR = terminator_CreateWin32SurfaceKHR,
     .GetPhysicalDeviceWin32PresentationSupportKHR =
-        terminator_GetPhysicalDeviceWin32PresentationSupportKHR,
+    terminator_GetPhysicalDeviceWin32PresentationSupportKHR,
 #endif
 #ifdef VK_USE_PLATFORM_XCB_KHR
     .CreateXcbSurfaceKHR = terminator_CreateXcbSurfaceKHR,
     .GetPhysicalDeviceXcbPresentationSupportKHR =
-        terminator_GetPhysicalDeviceXcbPresentationSupportKHR,
+    terminator_GetPhysicalDeviceXcbPresentationSupportKHR,
 #endif
 #ifdef VK_USE_PLATFORM_XLIB_KHR
     .CreateXlibSurfaceKHR = terminator_CreateXlibSurfaceKHR,
     .GetPhysicalDeviceXlibPresentationSupportKHR =
-        terminator_GetPhysicalDeviceXlibPresentationSupportKHR,
+    terminator_GetPhysicalDeviceXlibPresentationSupportKHR,
 #endif
 #ifdef VK_USE_PLATFORM_ANDROID_KHR
     .CreateAndroidSurfaceKHR = terminator_CreateAndroidSurfaceKHR,
 #endif
     .GetPhysicalDeviceDisplayPropertiesKHR =
-        terminator_GetPhysicalDeviceDisplayPropertiesKHR,
+    terminator_GetPhysicalDeviceDisplayPropertiesKHR,
     .GetPhysicalDeviceDisplayPlanePropertiesKHR =
-        terminator_GetPhysicalDeviceDisplayPlanePropertiesKHR,
+    terminator_GetPhysicalDeviceDisplayPlanePropertiesKHR,
     .GetDisplayPlaneSupportedDisplaysKHR =
-        terminator_GetDisplayPlaneSupportedDisplaysKHR,
+    terminator_GetDisplayPlaneSupportedDisplaysKHR,
     .GetDisplayModePropertiesKHR = terminator_GetDisplayModePropertiesKHR,
     .CreateDisplayModeKHR = terminator_CreateDisplayModeKHR,
     .GetDisplayPlaneCapabilitiesKHR = terminator_GetDisplayPlaneCapabilitiesKHR,
     .CreateDisplayPlaneSurfaceKHR = terminator_CreateDisplayPlaneSurfaceKHR,
 };
-
-LOADER_PLATFORM_THREAD_ONCE_DECLARATION(once_init);
 
 void *loader_instance_heap_alloc(const struct loader_instance *instance,
                                  size_t size,
@@ -173,10 +173,16 @@ void *loader_instance_heap_alloc(const struct loader_instance *instance,
         pMemory = instance->alloc_callbacks.pfnAllocation(
             instance->alloc_callbacks.pUserData, size, sizeof(uint64_t),
             alloc_scope);
+        if (size != 0 && pMemory == NULL) {
+            pMemory = NULL;
+        } else {
+            size += 0;
+        }
     } else {
 #endif
         pMemory = malloc(size);
     }
+
     return pMemory;
 }
 
@@ -554,32 +560,25 @@ static size_t loader_platform_combine_path(char *dest, size_t len, ...) {
  * Given string of three part form "maj.min.pat" convert to a vulkan version
  * number.
  */
-static uint32_t loader_make_version(const char *vers_str) {
+static uint32_t loader_make_version(char *vers_str) {
     uint32_t vers = 0, major = 0, minor = 0, patch = 0;
-    char *minor_str = NULL;
-    char *patch_str = NULL;
-    char *cstr;
-    char *str;
+    char *vers_tok;
 
     if (!vers_str)
         return vers;
-    cstr = loader_stack_alloc(strlen(vers_str) + 1);
-    strcpy(cstr, vers_str);
-    while ((str = strchr(cstr, '.')) != NULL) {
-        if (minor_str == NULL) {
-            minor_str = str + 1;
-            *str = '\0';
-            major = atoi(cstr);
-        } else if (patch_str == NULL) {
-            patch_str = str + 1;
-            *str = '\0';
-            minor = atoi(minor_str);
-        } else {
-            return vers;
+
+    vers_tok = strtok(vers_str, ".\"\n\r");
+    if (NULL != vers_tok) {
+        major = (uint16_t)atoi(vers_tok);
+        vers_tok = strtok(NULL, ".\"\n\r");
+        if (NULL != vers_tok) {
+            minor = (uint16_t)atoi(vers_tok);
+            vers_tok = strtok(NULL, ".\"\n\r");
+            if (NULL != vers_tok) {
+                patch = (uint16_t)atoi(vers_tok);
+            }
         }
-        cstr = str + 1;
     }
-    patch = atoi(patch_str);
 
     return VK_MAKE_VERSION(major, minor, patch);
 }
@@ -608,9 +607,9 @@ bool has_vk_extension_property_array(const VkExtensionProperties *vk_ext_prop,
  * matching the given vk_ext_prop
  */
 bool has_vk_extension_property(const VkExtensionProperties *vk_ext_prop,
-                               const struct loader_extension_list *ext_list) {
+                               const struct loader_extension_entry_list *ext_list) {
     for (uint32_t i = 0; i < ext_list->count; i++) {
-        if (compare_vk_extension_properties(&ext_list->list[i], vk_ext_prop))
+        if (compare_vk_extension_properties(&ext_list->list[i].props, vk_ext_prop))
             return true;
     }
     return false;
@@ -621,7 +620,7 @@ bool has_vk_extension_property(const VkExtensionProperties *vk_ext_prop,
  */
 bool has_vk_dev_ext_property(
     const VkExtensionProperties *ext_prop,
-    const struct loader_device_extension_list *ext_list) {
+    const struct loader_extension_entry_list *ext_list) {
     for (uint32_t i = 0; i < ext_list->count; i++) {
         if (compare_vk_extension_properties(&ext_list->list[i].props, ext_prop))
             return true;
@@ -687,26 +686,14 @@ loader_get_next_layer_property(const struct loader_instance *inst,
  */
 void loader_delete_layer_properties(const struct loader_instance *inst,
                                     struct loader_layer_list *layer_list) {
-    uint32_t i, j;
-    struct loader_device_extension_list *dev_ext_list;
+    uint32_t i;
+
     if (!layer_list)
         return;
 
     for (i = 0; i < layer_list->count; i++) {
-        loader_destroy_generic_list(
-            inst, (struct loader_generic_list *)&layer_list->list[i]
-                      .instance_extension_list);
-        dev_ext_list = &layer_list->list[i].device_extension_list;
-        if (dev_ext_list->capacity > 0 &&
-            NULL != dev_ext_list->list &&
-            dev_ext_list->list->entrypoint_count > 0) {
-            for (j = 0; j < dev_ext_list->list->entrypoint_count; j++) {
-                loader_instance_heap_free(inst, dev_ext_list->list->entrypoints[j]);
-            }
-            loader_instance_heap_free(inst, dev_ext_list->list->entrypoints);
-        }
-        loader_destroy_generic_list(inst,
-                                    (struct loader_generic_list *)dev_ext_list);
+        loader_destroy_ext_entry_list(inst, &layer_list->list[i].device_extension_list);
+        loader_destroy_ext_entry_list(inst, &layer_list->list[i].instance_extension_list);
     }
     layer_list->count = 0;
 
@@ -719,7 +706,7 @@ void loader_delete_layer_properties(const struct loader_instance *inst,
 static VkResult loader_add_instance_extensions(
     const struct loader_instance *inst,
     const PFN_vkEnumerateInstanceExtensionProperties fp_get_props,
-    const char *lib_name, struct loader_extension_list *ext_list) {
+    const char *lib_name, struct loader_extension_entry_list *ext_list) {
     uint32_t i, count = 0;
     VkExtensionProperties *ext_props;
     VkResult res = VK_SUCCESS;
@@ -742,6 +729,10 @@ static VkResult loader_add_instance_extensions(
     }
 
     ext_props = loader_stack_alloc(count * sizeof(VkExtensionProperties));
+    if (NULL == ext_props) {
+        res = VK_ERROR_OUT_OF_HOST_MEMORY;
+        goto out;
+    }
 
     res = fp_get_props(NULL, &count, ext_props);
     if (res != VK_SUCCESS) {
@@ -784,7 +775,7 @@ static VkResult
 loader_init_device_extensions(const struct loader_instance *inst,
                               struct loader_physical_device *phys_dev,
                               uint32_t count, VkExtensionProperties *ext_props,
-                              struct loader_extension_list *ext_list) {
+                              struct loader_extension_entry_list *ext_list) {
     VkResult res;
     uint32_t i;
 
@@ -818,7 +809,7 @@ VkResult loader_add_device_extensions(const struct loader_instance *inst,
                                           fpEnumerateDeviceExtensionProperties,
                                       VkPhysicalDevice physical_device,
                                       const char *lib_name,
-                                      struct loader_extension_list *ext_list) {
+                                      struct loader_extension_entry_list *ext_list) {
     uint32_t i, count;
     VkResult res;
     VkExtensionProperties *ext_props;
@@ -861,14 +852,16 @@ VkResult loader_add_device_extensions(const struct loader_instance *inst,
 VkResult loader_init_generic_list(const struct loader_instance *inst,
                               struct loader_generic_list *list_info,
                               size_t element_size) {
-    list_info->capacity = 32 * element_size;
+    size_t capacity = 32 * element_size;
+    list_info->count = 0;
+    list_info->capacity = 0;
     list_info->list = loader_instance_heap_alloc(
-        inst, list_info->capacity, VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+        inst, capacity, VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
     if (list_info->list == NULL) {
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
-    memset(list_info->list, 0, list_info->capacity);
-    list_info->count = 0;
+    memset(list_info->list, 0, capacity);
+    list_info->capacity = capacity;
     return VK_SUCCESS;
 }
 
@@ -877,6 +870,32 @@ void loader_destroy_generic_list(const struct loader_instance *inst,
     loader_instance_heap_free(inst, list->list);
     list->count = 0;
     list->capacity = 0;
+    list->list = NULL;
+}
+
+void loader_destroy_ext_entry_list(const struct loader_instance *inst,
+    struct loader_extension_entry_list *ext_entry_list) {
+    uint32_t i, j;
+    if (!ext_entry_list)
+        return;
+    
+    for (i = 0; i < ext_entry_list->count; i++) {
+        if (ext_entry_list->capacity > 0 &&
+            NULL != ext_entry_list->list &&
+            ext_entry_list->list[i].entrypoint_count > 0) {
+            for (j = 0; j < ext_entry_list->list[i].entrypoint_count; j++) {
+                loader_instance_heap_free(inst, ext_entry_list->list[i].entrypoints[j]);
+            }
+            loader_instance_heap_free(inst, ext_entry_list->list[i].entrypoints);
+        }
+    }
+    ext_entry_list->count = 0;
+
+    if (ext_entry_list->capacity > 0) {
+        loader_instance_heap_free(inst, ext_entry_list->list);
+        ext_entry_list->capacity = 0;
+        ext_entry_list->list = NULL;
+    }
 }
 
 /*
@@ -886,7 +905,7 @@ void loader_destroy_generic_list(const struct loader_instance *inst,
  *  Vk_SUCCESS on success
  */
 VkResult loader_add_to_ext_list(const struct loader_instance *inst,
-                                struct loader_extension_list *ext_list,
+                                struct loader_extension_entry_list *ext_list,
                                 uint32_t prop_list_count,
                                 const VkExtensionProperties *props) {
     uint32_t i;
@@ -938,11 +957,14 @@ VkResult loader_add_to_ext_list(const struct loader_instance *inst,
  *  Vk_SUCCESS on success
  */
 VkResult
-loader_add_to_dev_ext_list(const struct loader_instance *inst,
-                           struct loader_device_extension_list *ext_list,
+loader_add_entrypoints_to_ext_list(const struct loader_instance *inst,
+                           struct loader_extension_entry_list *ext_list,
                            const VkExtensionProperties *props,
                            uint32_t entry_count, char **entrys) {
-    uint32_t idx;
+    int32_t idx = -1;
+    uint32_t i;
+    VkResult res = VK_SUCCESS;
+
     if (ext_list->list == NULL || ext_list->capacity == 0) {
         VkResult res = loader_init_generic_list(
             inst, (struct loader_generic_list *)ext_list,
@@ -954,10 +976,11 @@ loader_add_to_dev_ext_list(const struct loader_instance *inst,
 
     // look for duplicates
     if (has_vk_dev_ext_property(props, ext_list)) {
-        return VK_SUCCESS;
+        goto out;
     }
 
-    idx = ext_list->count;
+    idx = (int32_t)ext_list->count;
+
     // add to list at end
     // check for enough capacity
     if (idx * sizeof(struct loader_dev_ext_props) >= ext_list->capacity) {
@@ -965,9 +988,10 @@ loader_add_to_dev_ext_list(const struct loader_instance *inst,
         ext_list->list = loader_instance_heap_realloc(
             inst, ext_list->list, ext_list->capacity, ext_list->capacity * 2,
             VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
-
-        if (ext_list->list == NULL)
-            return VK_ERROR_OUT_OF_HOST_MEMORY;
+        if (ext_list->list == NULL) {
+            res = VK_ERROR_OUT_OF_HOST_MEMORY;
+            goto out;
+        }
 
         // double capacity
         ext_list->capacity *= 2;
@@ -976,31 +1000,44 @@ loader_add_to_dev_ext_list(const struct loader_instance *inst,
     memcpy(&ext_list->list[idx].props, props,
            sizeof(struct loader_dev_ext_props));
     ext_list->list[idx].entrypoint_count = entry_count;
-    ext_list->list[idx].entrypoints =
-        loader_instance_heap_alloc(inst, sizeof(char *) * entry_count,
-                                   VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
-    if (ext_list->list[idx].entrypoints == NULL) {
-        ext_list->list[idx].entrypoint_count = 0;
-        return VK_ERROR_OUT_OF_HOST_MEMORY;
-    }
-    for (uint32_t i = 0; i < entry_count; i++) {
-        ext_list->list[idx].entrypoints[i] = loader_instance_heap_alloc(
-            inst, strlen(entrys[i]) + 1, VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
-        if (ext_list->list[idx].entrypoints[i] == NULL) {
-            for (uint32_t j = 0; j < i; j++) {
-                loader_instance_heap_free(inst,
-                                          ext_list->list[idx].entrypoints[j]);
-            }
-            loader_instance_heap_free(inst, ext_list->list[idx].entrypoints);
-            ext_list->list[idx].entrypoint_count = 0;
-            ext_list->list[idx].entrypoints = NULL;
-            return VK_ERROR_OUT_OF_HOST_MEMORY;
+    if (entry_count > 0) {
+        ext_list->list[idx].entrypoints =
+            loader_instance_heap_alloc(inst, sizeof(char *) * entry_count,
+                                       VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+        if (ext_list->list[idx].entrypoints == NULL) {
+            res = VK_ERROR_OUT_OF_HOST_MEMORY;
+            goto out;
+        } else {
+            memset(ext_list->list[idx].entrypoints, 0, sizeof(char *) * entry_count);
         }
-        strcpy(ext_list->list[idx].entrypoints[i], entrys[i]);
+        for (i = 0; i < entry_count; i++) {
+            ext_list->list[idx].entrypoints[i] = loader_instance_heap_alloc(
+                inst, strlen(entrys[i]) + 1, VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+            if (ext_list->list[idx].entrypoints[i] == NULL) {
+                res = VK_ERROR_OUT_OF_HOST_MEMORY;
+                goto out;
+            }
+            strcpy(ext_list->list[idx].entrypoints[i], entrys[i]);
+        }
     }
     ext_list->count++;
 
-    return VK_SUCCESS;
+out:
+
+    if (VK_SUCCESS != res && idx >= 0) {
+        if (NULL != ext_list->list[idx].entrypoints) {
+            for (i = 0; i < entry_count; i++) {
+                if (NULL != ext_list->list[idx].entrypoints[i]) {
+                    loader_instance_heap_free(inst, ext_list->list[idx].entrypoints[i]);
+                }
+            }
+            loader_instance_heap_free(inst, ext_list->list[idx].entrypoints);
+        }
+        ext_list->list[idx].entrypoint_count = 0;
+        ext_list->list[idx].entrypoints = NULL;
+    }
+
+    return res;
 }
 
 /**
@@ -1167,17 +1204,7 @@ void loader_find_layer_name_add_list(
 
 static VkExtensionProperties *
 get_extension_property(const char *name,
-                       const struct loader_extension_list *list) {
-    for (uint32_t i = 0; i < list->count; i++) {
-        if (strcmp(name, list->list[i].extensionName) == 0)
-            return &list->list[i];
-    }
-    return NULL;
-}
-
-static VkExtensionProperties *
-get_dev_extension_property(const char *name,
-                           const struct loader_device_extension_list *list) {
+                       const struct loader_extension_entry_list *list) {
     for (uint32_t i = 0; i < list->count; i++) {
         if (strcmp(name, list->list[i].props.extensionName) == 0)
             return &list->list[i].props;
@@ -1207,8 +1234,8 @@ get_dev_extension_property(const char *name,
 
 VkResult loader_get_icd_loader_instance_extensions(
     const struct loader_instance *inst, struct loader_icd_libs *icd_libs,
-    struct loader_extension_list *inst_exts) {
-    struct loader_extension_list icd_exts;
+    struct loader_extension_entry_list *inst_exts) {
+    struct loader_extension_entry_list icd_exts;
     VkResult res = VK_SUCCESS;
 
     loader_log(inst, VK_DEBUG_REPORT_DEBUG_BIT_EXT, 0,
@@ -1226,20 +1253,24 @@ VkResult loader_get_icd_loader_instance_extensions(
             inst, icd_libs->list[i].EnumerateInstanceExtensionProperties,
             icd_libs->list[i].lib_name, &icd_exts);
         if (VK_SUCCESS == res) {
-            res = loader_add_to_ext_list(inst, inst_exts, icd_exts.count,
-                                         icd_exts.list);
+            for (uint32_t j = 0; j < icd_exts.count; j++) {
+                res = loader_add_to_ext_list(inst, inst_exts, 1, &icd_exts.list[j].props);
+                if (VK_SUCCESS != res) {
+                    break;
+                }
+            }
         }
-        loader_destroy_generic_list(inst,
-                                    (struct loader_generic_list *)&icd_exts);
+        loader_destroy_ext_entry_list(inst, &icd_exts);
         if (VK_SUCCESS != res) {
             goto out;
         }
-    };
+    }
 
     // Traverse loader's extensions, adding non-duplicate extensions to the list
     debug_report_add_instance_extensions(inst, inst_exts);
 
 out:
+
     return res;
 }
 
@@ -1347,7 +1378,6 @@ static void loader_icd_destroy(struct loader_instance *ptr_inst,
         loader_destroy_logical_device(ptr_inst, dev, pAllocator);
         dev = next_dev;
     }
-
     loader_instance_heap_free(ptr_inst, icd);
 }
 
@@ -1429,12 +1459,16 @@ bool loader_get_icd_interface_version(
 
 void loader_scanned_icd_clear(const struct loader_instance *inst,
                               struct loader_icd_libs *icd_libs) {
+    uint32_t i;
     if (icd_libs->capacity == 0)
         return;
-    for (uint32_t i = 0; i < icd_libs->count; i++) {
+    for (i = 0; i < icd_libs->count; i++) {
         loader_platform_close_library(icd_libs->list[i].handle);
         loader_instance_heap_free(inst, icd_libs->list[i].lib_name);
+        loader_destroy_ext_entry_list(inst, &icd_libs->list[i].device_extension_list);
+        loader_destroy_ext_entry_list(inst, &icd_libs->list[i].instance_extension_list);
     }
+
     loader_instance_heap_free(inst, icd_libs->list);
     icd_libs->capacity = 0;
     icd_libs->count = 0;
@@ -1450,7 +1484,7 @@ static VkResult loader_scanned_icd_init(const struct loader_instance *inst,
         inst, icd_libs->capacity, VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
     if (NULL == icd_libs->list) {
         loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-            "realloc failed for layer list when attempting to add new layer");
+            "alloc failed for layer list when attempting to add new layer");
         err = VK_ERROR_OUT_OF_HOST_MEMORY;
     }
     return err;
@@ -1588,6 +1622,14 @@ static VkResult loader_scanned_icd_add(const struct loader_instance *inst,
         goto out;
     }
     strcpy(new_node->lib_name, filename);
+
+    new_node->instance_extension_list.capacity = 0;
+    new_node->instance_extension_list.count = 0;
+    new_node->instance_extension_list.list = NULL;
+    new_node->device_extension_list.capacity = 0;
+    new_node->device_extension_list.count = 0;
+    new_node->device_extension_list.list = NULL;
+
     icd_libs->count++;
 
 out:
@@ -1903,31 +1945,33 @@ VkResult loader_copy_layer_properties(const struct loader_instance *inst,
     if (src->device_extension_list.count > 0 &&
         src->device_extension_list.list->entrypoint_count > 0) {
         cnt = src->device_extension_list.list->entrypoint_count;
-        dst->device_extension_list.list->entrypoints =
-            loader_instance_heap_alloc(inst, sizeof(char *) * cnt,
-                                       VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
-        if (NULL == dst->device_extension_list.list->entrypoints) {
-            loader_log(
-                inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                "alloc failed for device extension list entrypoint array");
-            return VK_ERROR_OUT_OF_HOST_MEMORY;
-        }
-        memset(dst->device_extension_list.list->entrypoints, 0, sizeof(char *) * cnt);
-
-        for (i = 0; i < cnt; i++) {
-            dst->device_extension_list.list->entrypoints[i] =
-                loader_instance_heap_alloc(
-                    inst,
-                    strlen(src->device_extension_list.list->entrypoints[i]) + 1,
-                    VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
-            if (NULL == dst->device_extension_list.list->entrypoints[i]) {
+        if (cnt > 0) {
+            dst->device_extension_list.list->entrypoints =
+                loader_instance_heap_alloc(inst, sizeof(char *) * cnt,
+                                           VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+            if (NULL == dst->device_extension_list.list->entrypoints) {
                 loader_log(
                     inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                    "alloc failed for device extension list entrypoint %d", i);
+                    "alloc failed for device extension list entrypoint array");
                 return VK_ERROR_OUT_OF_HOST_MEMORY;
             }
-            strcpy(dst->device_extension_list.list->entrypoints[i],
-                   src->device_extension_list.list->entrypoints[i]);
+            memset(dst->device_extension_list.list->entrypoints, 0, sizeof(char *) * cnt);
+
+            for (i = 0; i < cnt; i++) {
+                dst->device_extension_list.list->entrypoints[i] =
+                    loader_instance_heap_alloc(
+                        inst,
+                        strlen(src->device_extension_list.list->entrypoints[i]) + 1,
+                        VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+                if (NULL == dst->device_extension_list.list->entrypoints[i]) {
+                    loader_log(
+                        inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                        "alloc failed for device extension list entrypoint %d", i);
+                    return VK_ERROR_OUT_OF_HOST_MEMORY;
+                }
+                strcpy(dst->device_extension_list.list->entrypoints[i],
+                       src->device_extension_list.list->entrypoints[i]);
+            }
         }
     }
 
@@ -2105,73 +2149,161 @@ static void loader_add_layer_property_meta(
 
 static void loader_read_json_layer(
     const struct loader_instance *inst,
-    struct loader_layer_list *layer_instance_list, cJSON *layer_node,
-    cJSON *item, cJSON *disable_environment, bool is_implicit, char *filename) {
+    struct loader_layer_list *layer_instance_list, uint16_t file_major_vers,
+    uint16_t file_minor_vers, cJSON *layer_node, cJSON *item,
+    cJSON *disable_environment, bool is_implicit, char *filename) {
     char *temp;
     char *name, *type, *library_path, *api_version;
     char *implementation_version, *description;
     cJSON *ext_item;
     VkExtensionProperties ext_prop;
 
-/*
- * The following are required in the "layer" object:
- * (required) "name"
- * (required) "type"
- * (required) “library_path”
- * (required) “api_version”
- * (required) “implementation_version”
- * (required) “description”
- * (required for implicit layers) “disable_environment”
- */
+    /*
+     * The following are required in the "layer" object:
+     * (required) "name"
+     * (required) "type"
+     * (required) “library_path”
+     * (required) “api_version”
+     * (required) “implementation_version”
+     * (required) “description”
+     * (required for implicit layers) “disable_environment”
+     */
+    item = cJSON_GetObjectItem(layer_node, "name");
+    if (item == NULL) {
+        layer_node = layer_node->next;
+        loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+                   "Didn't find required layer value name in manifest JSON "
+                   "file, skipping this layer");
+        return;
+    }
+    temp = cJSON_Print(item);
+    if (temp == NULL) {
+        layer_node = layer_node->next;
+        loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+                   "Problem accessing layer value name in manifest JSON "
+                   "file, skipping this layer");
+        return;
+    }
+    temp[strlen(temp) - 1] = '\0';
+    name = loader_stack_alloc(strlen(&temp[1]) + 1);
+    strcpy(name, &temp[1]);
+    cJSON_Free(temp);
 
-#define GET_JSON_OBJECT(node, var)                                             \
-    {                                                                          \
-        var = cJSON_GetObjectItem(node, #var);                                 \
-        if (var == NULL) {                                                     \
-            layer_node = layer_node->next;                                     \
-            loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,               \
-                       "Didn't find required layer object %s in manifest "     \
-                       "JSON file, skipping this layer",                       \
-                       #var);                                                  \
-            return;                                                            \
-        }                                                                      \
+    item = cJSON_GetObjectItem(layer_node, "type");
+    if (item == NULL) {
+        layer_node = layer_node->next;
+        loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+                   "Didn't find required layer value type in manifest JSON "
+                   "file, skipping this layer");
+        return;
     }
-#define GET_JSON_ITEM(node, var)                                               \
-    {                                                                          \
-        item = cJSON_GetObjectItem(node, #var);                                \
-        if (item == NULL) {                                                    \
-            layer_node = layer_node->next;                                     \
-            loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,               \
-                       "Didn't find required layer value %s in manifest JSON " \
-                       "file, skipping this layer",                            \
-                       #var);                                                  \
-            return;                                                            \
-        }                                                                      \
-        temp = cJSON_Print(item);                                              \
-        if (temp == NULL) {                                                    \
-            layer_node = layer_node->next;                                     \
-            loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,               \
-                       "Problem accessing layer value %s in manifest JSON "    \
-                       "file, skipping this layer",                            \
-                       #var);                                                  \
-            return;                                                            \
-        }                                                                      \
-        temp[strlen(temp) - 1] = '\0';                                         \
-        var = loader_stack_alloc(strlen(temp) + 1);                            \
-        strcpy(var, &temp[1]);                                                 \
-        cJSON_Free(temp);                                                      \
+    temp = cJSON_Print(item);
+    if (temp == NULL) {
+        layer_node = layer_node->next;
+        loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+                   "Problem accessing layer value type in manifest JSON "
+                   "file, skipping this layer");
+        return;
     }
-    GET_JSON_ITEM(layer_node, name)
-    GET_JSON_ITEM(layer_node, type)
-    GET_JSON_ITEM(layer_node, library_path)
-    GET_JSON_ITEM(layer_node, api_version)
-    GET_JSON_ITEM(layer_node, implementation_version)
-    GET_JSON_ITEM(layer_node, description)
+    temp[strlen(temp) - 1] = '\0';
+    type = loader_stack_alloc(strlen(&temp[1]) + 1);
+    strcpy(type, &temp[1]);
+    cJSON_Free(temp);
+
+    item = cJSON_GetObjectItem(layer_node, "library_path");
+    if (item == NULL) {
+        layer_node = layer_node->next;
+        loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+                   "Didn't find required layer value library_path in manifest JSON "
+                   "file, skipping this layer");
+        return;
+    }
+    temp = cJSON_Print(item);
+    if (temp == NULL) {
+        layer_node = layer_node->next;
+        loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+                   "Problem accessing layer value library_path in manifest JSON "
+                   "file, skipping this layer");
+        return;
+    }
+    temp[strlen(temp) - 1] = '\0';
+    library_path = loader_stack_alloc(strlen(&temp[1]) + 1);
+    strcpy(library_path, &temp[1]);
+    cJSON_Free(temp);
+
+    item = cJSON_GetObjectItem(layer_node, "api_version");
+    if (item == NULL) {
+        layer_node = layer_node->next;
+        loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+                   "Didn't find required layer value api_version in manifest JSON "
+                   "file, skipping this layer");
+        return;
+    }
+    temp = cJSON_Print(item);
+    if (temp == NULL) {
+        layer_node = layer_node->next;
+        loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+                   "Problem accessing layer value api_version in manifest JSON "
+                   "file, skipping this layer");
+        return;
+    }
+    temp[strlen(temp) - 1] = '\0';
+    api_version = loader_stack_alloc(strlen(&temp[1]) + 1);
+    strcpy(api_version, &temp[1]);
+    cJSON_Free(temp);
+
+    item = cJSON_GetObjectItem(layer_node, "implementation_version");
+    if (item == NULL) {
+        layer_node = layer_node->next;
+        loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+                   "Didn't find required layer value implementation_version in manifest JSON "
+                   "file, skipping this layer");
+        return;
+    }
+    temp = cJSON_Print(item);
+    if (temp == NULL) {
+        layer_node = layer_node->next;
+        loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+                   "Problem accessing layer value implementation_version in manifest JSON "
+                   "file, skipping this layer");
+        return;
+    }
+    temp[strlen(temp) - 1] = '\0';
+    implementation_version = loader_stack_alloc(strlen(&temp[1]) + 1);
+    strcpy(implementation_version, &temp[1]);
+    cJSON_Free(temp);
+
+    item = cJSON_GetObjectItem(layer_node, "description");
+    if (item == NULL) {
+        layer_node = layer_node->next;
+        loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+                   "Didn't find required layer value description in manifest JSON "
+                   "file, skipping this layer");
+        return;
+    }
+    temp = cJSON_Print(item);
+    if (temp == NULL) {
+        layer_node = layer_node->next;
+        loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+                   "Problem accessing layer value description in manifest JSON "
+                   "file, skipping this layer");
+        return;
+    }
+    temp[strlen(temp) - 1] = '\0';
+    description = loader_stack_alloc(strlen(&temp[1]) + 1);
+    strcpy(description, &temp[1]);
+    cJSON_Free(temp);
+
     if (is_implicit) {
-        GET_JSON_OBJECT(layer_node, disable_environment)
+        disable_environment = cJSON_GetObjectItem(layer_node, "disable_environment");
+        if (disable_environment == NULL) {
+            layer_node = layer_node->next;
+            loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+                "Didn't find required layer object disable_environment in manifest "
+                "JSON file, skipping this layer");
+            return;
+        }
     }
-#undef GET_JSON_ITEM
-#undef GET_JSON_OBJECT
 
     // add list entry
     struct loader_layer_properties *props = NULL;
@@ -2243,29 +2375,13 @@ static void loader_read_json_layer(
             '\0';
     }
 
-/**
-* Now get all optional items and objects and put in list:
-* functions
-* instance_extensions
-* device_extensions
-* enable_environment (implicit layers only)
-*/
-#define GET_JSON_OBJECT(node, var)                                             \
-    { var = cJSON_GetObjectItem(node, #var); }
-#define GET_JSON_ITEM(node, var)                                               \
-    {                                                                          \
-        item = cJSON_GetObjectItem(node, #var);                                \
-        if (item != NULL) {                                                    \
-            temp = cJSON_Print(item);                                          \
-            if (temp != NULL) {                                                \
-                temp[strlen(temp) - 1] = '\0';                                 \
-                var = loader_stack_alloc(strlen(temp) + 1);                    \
-                strcpy(var, &temp[1]);                                         \
-                cJSON_Free(temp);                                              \
-            }                                                                  \
-        }                                                                      \
-    }
-
+    /**
+    * Now get all optional items and objects and put in list:
+    * functions
+    * instance_extensions
+    * device_extensions
+    * enable_environment (implicit layers only)
+    */
     cJSON *instance_extensions, *device_extensions, *functions,
         *enable_environment;
     cJSON *entrypoints;
@@ -2283,48 +2399,104 @@ static void loader_read_json_layer(
     *     vkGetInstanceProcAddr
     *     vkGetDeviceProcAddr
     */
-    GET_JSON_OBJECT(layer_node, functions)
+    functions = cJSON_GetObjectItem(layer_node, "functions");
     if (functions != NULL) {
-        GET_JSON_ITEM(functions, vkGetInstanceProcAddr)
-        GET_JSON_ITEM(functions, vkGetDeviceProcAddr)
-        if (vkGetInstanceProcAddr != NULL)
-            strncpy(props->functions.str_gipa, vkGetInstanceProcAddr,
-                    sizeof(props->functions.str_gipa));
-        props->functions.str_gipa[sizeof(props->functions.str_gipa) - 1] = '\0';
-        if (vkGetDeviceProcAddr != NULL)
-            strncpy(props->functions.str_gdpa, vkGetDeviceProcAddr,
-                    sizeof(props->functions.str_gdpa));
-        props->functions.str_gdpa[sizeof(props->functions.str_gdpa) - 1] = '\0';
+        props->functions.str_gipa[0] = '\0';
+        props->functions.str_gdpa[0] = '\0';
+        item = cJSON_GetObjectItem(functions, "vkGetInstanceProcAddr");
+        if (item != NULL) {
+            temp = cJSON_Print(item);
+            if (temp != NULL) {
+                temp[strlen(temp) - 1] = '\0';
+                strncpy(props->functions.str_gipa, &temp[1],
+                    sizeof(props->functions.str_gipa) - 1);
+                props->functions.str_gipa[sizeof(props->functions.str_gipa) - 1] = '\0';
+                cJSON_Free(temp);
+            }
+        }
+        item = cJSON_GetObjectItem(functions, "vkGetDeviceProcAddr");
+        if (item != NULL) {
+            temp = cJSON_Print(item);
+            if (temp != NULL) {
+                temp[strlen(temp) - 1] = '\0';
+                strncpy(props->functions.str_gdpa, &temp[1],
+                    sizeof(props->functions.str_gdpa) - 1);
+                props->functions.str_gdpa[sizeof(props->functions.str_gdpa) - 1] = '\0';
+                cJSON_Free(temp);
+            }
+        }
     }
     /**
     * instance_extensions
     * array of
     *     name
     *     spec_version
+    *     entrypoints
     */
-    GET_JSON_OBJECT(layer_node, instance_extensions)
+    instance_extensions = cJSON_GetObjectItem(layer_node, "instance_extensions");
     if (instance_extensions != NULL) {
         int count = cJSON_GetArraySize(instance_extensions);
         for (i = 0; i < count; i++) {
+            ext_prop.extensionName[0] = '\0';
+            ext_prop.specVersion = 0;
             ext_item = cJSON_GetArrayItem(instance_extensions, i);
-            GET_JSON_ITEM(ext_item, name)
-            if (name != NULL) {
-                strncpy(ext_prop.extensionName, name,
-                        sizeof(ext_prop.extensionName));
-                ext_prop.extensionName[sizeof(ext_prop.extensionName) - 1] =
-                    '\0';
+            item = cJSON_GetObjectItem(ext_item, "name");
+            if (item != NULL) {
+                temp = cJSON_Print(item);
+                if (temp != NULL) {
+                    temp[strlen(temp) - 1] = '\0';
+                    strncpy(ext_prop.extensionName, &temp[1], sizeof(ext_prop.extensionName) - 1);
+                    ext_prop.extensionName[sizeof(ext_prop.extensionName) - 1] = '\0';
+                    cJSON_Free(temp);
+                }
             }
-            GET_JSON_ITEM(ext_item, spec_version)
-            if (NULL != spec_version) {
-                ext_prop.specVersion = atoi(spec_version);
-            } else {
-                ext_prop.specVersion = 0;
+            item = cJSON_GetObjectItem(ext_item, "spec_version");
+            if (item != NULL) {
+                temp = cJSON_Print(item);
+                if (temp != NULL) {
+                    temp[strlen(temp) - 1] = '\0';
+                    ext_prop.specVersion = atoi(&temp[1]);
+                    cJSON_Free(temp);
+                }
             }
-            bool ext_unsupported =
-                wsi_unsupported_instance_extension(&ext_prop);
-            if (!ext_unsupported) {
-                loader_add_to_ext_list(inst, &props->instance_extension_list, 1,
-                                       &ext_prop);
+            if (!wsi_unsupported_instance_extension(&ext_prop)) {
+                entrypoints = cJSON_GetObjectItem(ext_item, "entrypoints");
+                if (entrypoints == NULL) {
+                    if (file_major_vers > 1 || file_minor_vers > 0) {
+                        loader_log(inst, VK_DEBUG_REPORT_DEBUG_BIT_EXT, 0,
+                                   "Layer %s Manifest file is using file "
+                                   "format %d.%d but has instance_extensions "
+                                   "without entry points\n",
+                                   name, file_major_vers, file_minor_vers,
+                                   DEFAULT_VK_DRIVERS_PATH);
+                        return;
+                    } else {
+                        loader_add_entrypoints_to_ext_list(inst, &props->instance_extension_list,
+                                                           &ext_prop, 0, NULL);
+                    }
+                    continue;
+                }
+                int entry_count = cJSON_GetArraySize(entrypoints);
+                if (entry_count) {
+                    entry_array =
+                        (char **)loader_stack_alloc(sizeof(char *) * entry_count);
+                    for (j = 0; j < entry_count; j++) {
+                        ext_item = cJSON_GetArrayItem(entrypoints, j);
+                        if (ext_item != NULL) {
+                            temp = cJSON_Print(ext_item);
+                            if (NULL == temp) {
+                                entry_array[j] = NULL;
+                                continue;
+                            }
+                            temp[strlen(temp) - 1] = '\0';
+                            entry_array[j] = loader_stack_alloc(strlen(&temp[1]) + 1);
+                            strcpy(entry_array[j], &temp[1]);
+                            cJSON_Free(temp);
+                        }
+                    }
+                }
+                loader_add_entrypoints_to_ext_list(inst, &props->instance_extension_list,
+                    &ext_prop, entry_count, entry_array);
             }
         }
     }
@@ -2335,59 +2507,75 @@ static void loader_read_json_layer(
     *     spec_version
     *     entrypoints
     */
-    GET_JSON_OBJECT(layer_node, device_extensions)
+    device_extensions = cJSON_GetObjectItem(layer_node, "device_extensions");
     if (device_extensions != NULL) {
         int count = cJSON_GetArraySize(device_extensions);
         for (i = 0; i < count; i++) {
+            ext_prop.extensionName[0] = '\0';
+            ext_prop.specVersion = 0;
             ext_item = cJSON_GetArrayItem(device_extensions, i);
-            GET_JSON_ITEM(ext_item, name)
-            GET_JSON_ITEM(ext_item, spec_version)
-            if (name != NULL) {
-                strncpy(ext_prop.extensionName, name,
-                        sizeof(ext_prop.extensionName));
-                ext_prop.extensionName[sizeof(ext_prop.extensionName) - 1] =
-                    '\0';
-            }
-            if (NULL != spec_version) {
-                ext_prop.specVersion = atoi(spec_version);
-            } else {
-                ext_prop.specVersion = 0;
-            }
-            // entrypoints = cJSON_GetObjectItem(ext_item, "entrypoints");
-            GET_JSON_OBJECT(ext_item, entrypoints)
-            int entry_count;
-            if (entrypoints == NULL) {
-                loader_add_to_dev_ext_list(inst, &props->device_extension_list,
-                                           &ext_prop, 0, NULL);
-                continue;
-            }
-            entry_count = cJSON_GetArraySize(entrypoints);
-            if (entry_count) {
-                entry_array =
-                    (char **)loader_stack_alloc(sizeof(char *) * entry_count);
-            }
-            for (j = 0; j < entry_count; j++) {
-                ext_item = cJSON_GetArrayItem(entrypoints, j);
-                if (ext_item != NULL) {
-                    temp = cJSON_Print(ext_item);
-                    if (NULL == temp) {
-                        entry_array[j] = NULL;
-                        continue;
-                    }
+            item = cJSON_GetObjectItem(ext_item, "name");
+            if (item != NULL) {
+                temp = cJSON_Print(item);
+                if (temp != NULL) {
                     temp[strlen(temp) - 1] = '\0';
-                    entry_array[j] = loader_stack_alloc(strlen(temp) + 1);
-                    strcpy(entry_array[j], &temp[1]);
+                    strncpy(ext_prop.extensionName, &temp[1], sizeof(ext_prop.extensionName) - 1);
+                    ext_prop.extensionName[sizeof(ext_prop.extensionName) - 1] = '\0';
                     cJSON_Free(temp);
                 }
             }
-            loader_add_to_dev_ext_list(inst, &props->device_extension_list,
+            item = cJSON_GetObjectItem(ext_item, "spec_version");
+            if (item != NULL) {
+                temp = cJSON_Print(item);
+                if (temp != NULL) {
+                    temp[strlen(temp) - 1] = '\0';
+                    ext_prop.specVersion = atoi(&temp[1]);
+                    cJSON_Free(temp);
+                }
+            }
+            entrypoints = cJSON_GetObjectItem(ext_item, "entrypoints");
+            if (entrypoints == NULL) {
+                if (file_major_vers > 1 || file_minor_vers > 0) {
+                    loader_log(inst, VK_DEBUG_REPORT_DEBUG_BIT_EXT, 0,
+                               "Layer %s Manifest file is using file format "
+                               "%d.%d but has device_extensions without"
+                               "entry points\n",
+                               name, file_major_vers, file_minor_vers,
+                               DEFAULT_VK_DRIVERS_PATH);
+                    return;
+                } else {
+                    loader_add_entrypoints_to_ext_list(
+                        inst, &props->device_extension_list, &ext_prop, 0,
+                        NULL);
+                }
+                continue;
+            }
+            int entry_count = cJSON_GetArraySize(entrypoints);
+            if (entry_count) {
+                entry_array =
+                    (char **)loader_stack_alloc(sizeof(char *) * entry_count);
+                for (j = 0; j < entry_count; j++) {
+                    ext_item = cJSON_GetArrayItem(entrypoints, j);
+                    if (ext_item != NULL) {
+                        temp = cJSON_Print(ext_item);
+                        if (NULL == temp) {
+                            entry_array[j] = NULL;
+                            continue;
+                        }
+                        temp[strlen(temp) - 1] = '\0';
+                        entry_array[j] = loader_stack_alloc(strlen(&temp[1]) + 1);
+                        strcpy(entry_array[j], &temp[1]);
+                        cJSON_Free(temp);
+                    }
+                }
+            }
+            loader_add_entrypoints_to_ext_list(inst, &props->device_extension_list,
                                        &ext_prop, entry_count, entry_array);
         }
     }
     if (is_implicit) {
-        GET_JSON_OBJECT(layer_node, enable_environment)
-
         // enable_environment is optional
+        enable_environment = cJSON_GetObjectItem(layer_node, "enable_environment");
         if (enable_environment) {
             strncpy(props->enable_env_var.name,
                     enable_environment->child->string,
@@ -2401,8 +2589,6 @@ static void loader_read_json_layer(
                 .value[sizeof(props->enable_env_var.value) - 1] = '\0';
         }
     }
-#undef GET_JSON_ITEM
-#undef GET_JSON_OBJECT
 }
 
 /**
@@ -2445,6 +2631,7 @@ loader_add_layer_properties(const struct loader_instance *inst,
     }
     loader_log(inst, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0,
                "Found manifest file %s, version %s", filename, file_vers);
+
     // Get the major/minor/and patch as integers for easier comparison
     vers_tok = strtok(file_vers, ".\"\n\r");
     if (NULL != vers_tok) {
@@ -2458,13 +2645,14 @@ loader_add_layer_properties(const struct loader_instance *inst,
             }
         }
     }
-    if (file_major_vers != 1 || file_minor_vers != 0 || file_patch_vers > 1) {
+    if (file_major_vers != 1 || file_minor_vers > 1  || file_patch_vers > 1) {
         loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
                    "%s Unexpected manifest file version (expected 1.0.0 or "
                    "1.0.1), may cause errors",
                    filename);
     }
     cJSON_Free(file_vers);
+
     // If "layers" is present, read in the array of layer objects
     layers_node = cJSON_GetObjectItem(json, "layers");
     if (layers_node != NULL) {
@@ -2485,7 +2673,8 @@ loader_add_layer_properties(const struct loader_instance *inst,
                            curLayer, filename);
                 return;
             }
-            loader_read_json_layer(inst, layer_instance_list, layer_node, item,
+            loader_read_json_layer(inst, layer_instance_list, file_major_vers,
+                                   file_minor_vers, layer_node, item,
                                    disable_environment, is_implicit, filename);
         }
     } else {
@@ -2521,9 +2710,10 @@ loader_add_layer_properties(const struct loader_instance *inst,
                        filename);
         } else {
             do {
-                loader_read_json_layer(inst, layer_instance_list, layer_node,
-                                       item, disable_environment, is_implicit,
-                                       filename);
+                loader_read_json_layer(inst, layer_instance_list,
+                                       file_major_vers, file_minor_vers,
+                                       layer_node, item, disable_environment,
+                                       is_implicit, filename);
                 layer_node = layer_node->next;
             } while (layer_node != NULL);
         }
@@ -2939,7 +3129,7 @@ VkResult loader_icd_scan(const struct loader_instance *inst,
                 }
             }
         }
-        if (file_major_vers != 1 || file_minor_vers != 0 || file_patch_vers > 1)
+        if (file_major_vers != 1 || file_minor_vers > 1 || file_patch_vers > 1)
             loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
                        "Unexpected manifest file version (expected 1.0.0 or "
                        "1.0.1), may "
@@ -2965,7 +3155,7 @@ VkResult loader_icd_scan(const struct loader_instance *inst,
                 }
                 // strip out extra quotes
                 temp[strlen(temp) - 1] = '\0';
-                char *library_path = loader_stack_alloc(strlen(temp) + 1);
+                char *library_path = loader_stack_alloc(strlen(&temp[1]) + 1);
                 if (NULL == library_path) {
                     loader_log(
                         inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
@@ -3022,11 +3212,173 @@ VkResult loader_icd_scan(const struct loader_instance *inst,
                     vers = loader_make_version(temp);
                     cJSON_Free(temp);
                 }
+
                 res = loader_scanned_icd_add(inst, icds, fullpath, vers);
                 if (VK_SUCCESS != res) {
-                    goto out;
+                    continue;
                 }
                 num_good_icds++;
+
+                VkExtensionProperties ext_prop;
+                struct loader_extension_entry_list *ext_entry_list = NULL;
+                cJSON *instance_extensions = NULL, *device_extensions = NULL, *entrypoints = NULL;
+                char *vkGetInstanceProcAddr = NULL, *vkGetDeviceProcAddr = NULL;
+                char **entry_array = NULL;
+                cJSON *ext_item = NULL;
+                int entry_count;
+                int i, j;
+
+                /**
+                * instance_extensions
+                * array of
+                *     name
+                *     spec_version
+                *     entrypoints
+                */
+                instance_extensions = cJSON_GetObjectItem(itemICD, "instance_extensions");
+                if (instance_extensions != NULL) {
+                    ext_entry_list = &icds[icds->count - 1].list->instance_extension_list;
+                    int count = cJSON_GetArraySize(instance_extensions);
+                    for (i = 0; i < count; i++) {
+                        ext_prop.extensionName[0] = '\0';
+                        ext_prop.specVersion = 0;
+                        ext_item = cJSON_GetArrayItem(instance_extensions, i);
+                        item = cJSON_GetObjectItem(ext_item, "name");
+                        if (item != NULL) {
+                            temp = cJSON_Print(item);
+                            if (temp != NULL) {
+                                temp[strlen(temp) - 1] = '\0';
+                                strncpy(ext_prop.extensionName, &temp[1], sizeof(ext_prop.extensionName));
+                                ext_prop.extensionName[sizeof(ext_prop.extensionName) - 1] = '\0';
+                                cJSON_Free(temp);
+                            }
+                        }
+                        item = cJSON_GetObjectItem(ext_item, "spec_version");
+                        if (item != NULL) {
+                            temp = cJSON_Print(item);
+                            if (temp != NULL) {
+                                temp[strlen(temp) - 1] = '\0';
+                                ext_prop.specVersion = atoi(&temp[1]);
+                                cJSON_Free(temp);
+                            }
+                        }
+                        if (!wsi_unsupported_instance_extension(&ext_prop)) {
+                            entrypoints = cJSON_GetObjectItem(ext_item, "entrypoints");
+                            if (entrypoints == NULL) {
+                                if (file_major_vers > 1 || file_minor_vers > 0) {
+                                    res = VK_ERROR_INITIALIZATION_FAILED;
+                                    loader_log(
+                                        inst, VK_DEBUG_REPORT_DEBUG_BIT_EXT, 0,
+                                        "ICD Manifest file %s is using file format %d.%d.%d but has "
+                                            "instance_extensions without entry points\n",
+                                        file_str, file_major_vers, file_minor_vers,
+                                        file_patch_vers, DEFAULT_VK_DRIVERS_PATH);
+                                    goto out;
+                                } else {
+                                    loader_add_entrypoints_to_ext_list(inst, ext_entry_list,
+                                                                       &ext_prop, 0, NULL);
+                                }
+                                continue;
+                            }
+                            entry_count = cJSON_GetArraySize(entrypoints);
+                            if (entry_count) {
+                                entry_array =
+                                    (char **)loader_stack_alloc(sizeof(char *) * entry_count);
+                            }
+                            for (j = 0; j < entry_count; j++) {
+                                ext_item = cJSON_GetArrayItem(entrypoints, j);
+                                if (ext_item != NULL) {
+                                    temp = cJSON_Print(ext_item);
+                                    if (NULL == temp) {
+                                        entry_array[j] = NULL;
+                                        continue;
+                                    }
+                                    temp[strlen(temp) - 1] = '\0';
+                                    entry_array[j] = loader_stack_alloc(strlen(&temp[1]) + 1);
+                                    strcpy(entry_array[j], &temp[1]);
+                                    cJSON_Free(temp);
+                                }
+                            }
+                            loader_add_entrypoints_to_ext_list(inst, ext_entry_list,
+                                &ext_prop, entry_count, entry_array);
+                        }
+                    }
+                }
+
+                /**
+                * device_extensions
+                * array of
+                *     name
+                *     spec_version
+                *     entrypoints
+                */
+                device_extensions = cJSON_GetObjectItem(itemICD, "device_extensions");
+                if (device_extensions != NULL) {
+                    ext_entry_list = &icds[icds->count - 1].list->device_extension_list;
+                    int count = cJSON_GetArraySize(device_extensions);
+                    for (i = 0; i < count; i++) {
+                        ext_prop.extensionName[0] = '\0';
+                        ext_prop.specVersion = 0;
+                        ext_item = cJSON_GetArrayItem(device_extensions, i);
+                        item = cJSON_GetObjectItem(ext_item, "name");
+                        if (item != NULL) {
+                            temp = cJSON_Print(item);
+                            if (temp != NULL) {
+                                temp[strlen(temp) - 1] = '\0';
+                                strncpy(ext_prop.extensionName, &temp[1], sizeof(ext_prop.extensionName));
+                                ext_prop.extensionName[sizeof(ext_prop.extensionName) - 1] = '\0';
+                                cJSON_Free(temp);
+                            }
+                        }
+                        item = cJSON_GetObjectItem(ext_item, "spec_version");
+                        if (item != NULL) {
+                            temp = cJSON_Print(item);
+                            if (temp != NULL) {
+                                temp[strlen(temp) - 1] = '\0';
+                                ext_prop.specVersion = atoi(&temp[1]);
+                                cJSON_Free(temp);
+                            }
+                        }
+                        entrypoints = cJSON_GetObjectItem(ext_item, "entrypoints");
+                        if (entrypoints == NULL) {
+                            if (file_major_vers > 1 || file_minor_vers > 0) {
+                                res = VK_ERROR_INITIALIZATION_FAILED;
+                                loader_log(
+                                    inst, VK_DEBUG_REPORT_DEBUG_BIT_EXT, 0,
+                                    "ICD Manifest file %s is using file format %d.%d.%d but has "
+                                        "device_extensions without entry points\n",
+                                    file_str, file_major_vers, file_minor_vers,
+                                    file_patch_vers, DEFAULT_VK_DRIVERS_PATH);
+                                goto out;
+                            } else {
+                                loader_add_entrypoints_to_ext_list(inst, ext_entry_list,
+                                                                   &ext_prop, 0, NULL);
+                            }
+                            continue;
+                        }
+                        entry_count = cJSON_GetArraySize(entrypoints);
+                        if (entry_count) {
+                            entry_array =
+                                (char **)loader_stack_alloc(sizeof(char *) * entry_count);
+                        }
+                        for (j = 0; j < entry_count; j++) {
+                            ext_item = cJSON_GetArrayItem(entrypoints, j);
+                            if (ext_item != NULL) {
+                                temp = cJSON_Print(ext_item);
+                                if (NULL == temp) {
+                                    entry_array[j] = NULL;
+                                    continue;
+                                }
+                                temp[strlen(temp) - 1] = '\0';
+                                entry_array[j] = loader_stack_alloc(strlen(&temp[1]) + 1);
+                                strcpy(entry_array[j], &temp[1]);
+                                cJSON_Free(temp);
+                            }
+                        }
+                        loader_add_entrypoints_to_ext_list(inst, ext_entry_list,
+                            &ext_prop, entry_count, entry_array);
+                    }
+                }
             } else {
                 loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
                            "Can't find \"library_path\" object in ICD JSON "
@@ -3045,6 +3397,7 @@ VkResult loader_icd_scan(const struct loader_instance *inst,
     }
 
 out:
+
     if (NULL != json) {
         cJSON_Delete(json);
     }
@@ -3223,6 +3576,9 @@ loader_gpa_instance_internal(VkInstance inst, const char *pName) {
         return addr;
     }
 
+    if (loader_phys_dev_ext_gpa(loader_get_instance(inst), pName, &addr))
+        return addr;
+
     // Don't call down the chain, this would be an infinite loop
     loader_log(NULL, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
                "loader_gpa_instance_internal() unrecognized name %s", pName);
@@ -3256,7 +3612,7 @@ static void loader_init_dispatch_dev_ext_entry(struct loader_instance *inst,
         gdpa_value = dev->loader_dispatch.core_dispatch.GetDeviceProcAddr(
             dev->device, funcName);
         if (gdpa_value != NULL)
-            dev->loader_dispatch.ext_dispatch.DevExt[idx] =
+            dev->loader_dispatch.ext_dispatch.dev_ext[idx] =
                 (PFN_vkDevExt)gdpa_value;
     } else {
         for (uint32_t i = 0; i < inst->total_icd_count; i++) {
@@ -3267,7 +3623,7 @@ static void loader_init_dispatch_dev_ext_entry(struct loader_instance *inst,
                     ldev->loader_dispatch.core_dispatch.GetDeviceProcAddr(
                         ldev->device, funcName);
                 if (gdpa_value != NULL)
-                    ldev->loader_dispatch.ext_dispatch.DevExt[idx] =
+                    ldev->loader_dispatch.ext_dispatch.dev_ext[idx] =
                         (PFN_vkDevExt)gdpa_value;
                 ldev = ldev->next;
             }
@@ -3283,32 +3639,105 @@ static void loader_init_dispatch_dev_ext_entry(struct loader_instance *inst,
 void loader_init_dispatch_dev_ext(struct loader_instance *inst,
                                   struct loader_device *dev) {
     for (uint32_t i = 0; i < MAX_NUM_DEV_EXTS; i++) {
-        if (inst->disp_hash[i].func_name != NULL)
+        if (inst->dev_ext_disp_hash[i].func_name != NULL)
             loader_init_dispatch_dev_ext_entry(inst, dev, i,
-                                               inst->disp_hash[i].func_name);
+                                               inst->dev_ext_disp_hash[i].func_name);
     }
 }
 
-static bool loader_check_icds_for_address(struct loader_instance *inst,
+static bool loader_check_icds_for_inst_ext_address(struct loader_instance *inst,
                                           const char *funcName) {
     struct loader_icd *icd;
     icd = inst->icds;
     while (icd) {
-        if (icd->this_icd_lib->GetInstanceProcAddr(icd->instance, funcName))
-            // this icd supports funcName
-            return true;
+        // Just skip any ICDs too old for instance extension support.
+        if (icd->this_icd_lib->interface_version >= INST_EXTENSION_ICD_MIN_VERSION) {
+            // Iterate over the extensions.
+            const struct loader_extension_entry_list *const extensions =
+                &(icd->this_icd_lib->instance_extension_list);
+            for (uint32_t extension = 0; extension < extensions->count;
+                ++extension) {
+                // Iterate over the entry points.
+                const struct loader_dev_ext_props *const property =
+                    &(extensions->list[extension]);
+                for (uint32_t entry = 0; entry < property->entrypoint_count;
+                    ++entry) {
+                    if (strcmp(property->entrypoints[entry], funcName) == 0) {
+                        return true;
+                    }
+                }
+            }
+        }
+        icd = icd->next;
+    }
+    return false;
+}
+
+static bool loader_check_layer_list_for_inst_ext_address(
+    const struct loader_layer_list *const layers, const char *funcName) {
+    // Iterate over the layers.
+    for (uint32_t layer = 0; layer < layers->count; ++layer) {
+        // Iterate over the extensions.
+        const struct loader_extension_entry_list *const extensions =
+            &(layers->list[layer].instance_extension_list);
+        for (uint32_t extension = 0; extension < extensions->count;
+            ++extension) {
+            // Iterate over the entry points.
+            const struct loader_dev_ext_props *const property =
+                &(extensions->list[extension]);
+            for (uint32_t entry = 0; entry < property->entrypoint_count;
+                ++entry) {
+                if (strcmp(property->entrypoints[entry], funcName) == 0) {
+                    return true;
+                }
+            }
+        }
+    }
+
+    return false;
+}
+
+static bool loader_check_icds_for_dev_ext_address(struct loader_instance *inst,
+    const char *funcName) {
+    struct loader_icd *icd;
+    icd = inst->icds;
+    while (icd) {
+        // If any ICD is too old for device extension entry point names, then just query
+        // if the entry point exists.
+        if (icd->this_icd_lib->interface_version < INST_EXTENSION_ICD_MIN_VERSION) {
+            if (icd->this_icd_lib->GetInstanceProcAddr(icd->instance, funcName)) {
+                // this icd supports funcName
+                return true;
+            }
+        } else {
+            // Iterate over the extensions.
+            const struct loader_extension_entry_list *const extensions =
+                &(icd->this_icd_lib->instance_extension_list);
+            for (uint32_t extension = 0; extension < extensions->count;
+                 ++extension) {
+                // Iterate over the entry points.
+                const struct loader_dev_ext_props *const property =
+                    &(extensions->list[extension]);
+                for (uint32_t entry = 0; entry < property->entrypoint_count;
+                     ++entry) {
+                    if (strcmp(property->entrypoints[entry], funcName) == 0) {
+                        return true;
+                    }
+                }
+            }
+        }
         icd = icd->next;
     }
 
     return false;
 }
 
-static bool loader_check_layer_list_for_address(
+static bool loader_check_layer_list_for_dev_ext_address(
     const struct loader_layer_list *const layers, const char *funcName) {
     // Iterate over the layers.
     for (uint32_t layer = 0; layer < layers->count; ++layer) {
         // Iterate over the extensions.
-        const struct loader_device_extension_list *const extensions =
+        const struct loader_extension_entry_list *const extensions =
             &(layers->list[layer].device_extension_list);
         for (uint32_t extension = 0; extension < extensions->count;
              ++extension) {
@@ -3327,43 +3756,32 @@ static bool loader_check_layer_list_for_address(
     return false;
 }
 
-static bool
-loader_check_layers_for_address(const struct loader_instance *const inst,
-                                const char *funcName) {
-    if (loader_check_layer_list_for_address(&inst->instance_layer_list,
-                                            funcName)) {
-        return true;
-    }
-
-    return false;
-}
-
 static void loader_free_dev_ext_table(struct loader_instance *inst) {
     for (uint32_t i = 0; i < MAX_NUM_DEV_EXTS; i++) {
-        loader_instance_heap_free(inst, inst->disp_hash[i].func_name);
-        loader_instance_heap_free(inst, inst->disp_hash[i].list.index);
+        loader_instance_heap_free(inst, inst->dev_ext_disp_hash[i].func_name);
+        loader_instance_heap_free(inst, inst->dev_ext_disp_hash[i].list.index);
     }
-    memset(inst->disp_hash, 0, sizeof(inst->disp_hash));
+    memset(inst->dev_ext_disp_hash, 0, sizeof(inst->dev_ext_disp_hash));
 }
 
 static bool loader_add_dev_ext_table(struct loader_instance *inst,
                                      uint32_t *ptr_idx, const char *funcName) {
     uint32_t i;
     uint32_t idx = *ptr_idx;
-    struct loader_dispatch_hash_list *list = &inst->disp_hash[idx].list;
+    struct loader_dispatch_hash_list *list = &inst->dev_ext_disp_hash[idx].list;
 
-    if (!inst->disp_hash[idx].func_name) {
+    if (!inst->dev_ext_disp_hash[idx].func_name) {
         // no entry here at this idx, so use it
         assert(list->capacity == 0);
-        inst->disp_hash[idx].func_name = (char *)loader_instance_heap_alloc(
+        inst->dev_ext_disp_hash[idx].func_name = (char *)loader_instance_heap_alloc(
             inst, strlen(funcName) + 1, VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
-        if (inst->disp_hash[idx].func_name == NULL) {
+        if (inst->dev_ext_disp_hash[idx].func_name == NULL) {
             loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
                        "loader_add_dev_ext_table() can't allocate memory for "
                        "func_name");
             return false;
         }
-        strncpy(inst->disp_hash[idx].func_name, funcName, strlen(funcName) + 1);
+        strncpy(inst->dev_ext_disp_hash[idx].func_name, funcName, strlen(funcName) + 1);
         return true;
     }
 
@@ -3393,18 +3811,18 @@ static bool loader_add_dev_ext_table(struct loader_instance *inst,
     // find an unused index in the hash table and use it
     i = (idx + 1) % MAX_NUM_DEV_EXTS;
     do {
-        if (!inst->disp_hash[i].func_name) {
-            assert(inst->disp_hash[i].list.capacity == 0);
-            inst->disp_hash[i].func_name =
+        if (!inst->dev_ext_disp_hash[i].func_name) {
+            assert(inst->dev_ext_disp_hash[i].list.capacity == 0);
+            inst->dev_ext_disp_hash[i].func_name =
                 (char *)loader_instance_heap_alloc(inst, strlen(funcName) + 1,
                                           VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
-            if (inst->disp_hash[i].func_name == NULL) {
+            if (inst->dev_ext_disp_hash[i].func_name == NULL) {
                 loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
                            "loader_add_dev_ext_table() can't rallocate "
                            "func_name memory");
                 return false;
             }
-            strncpy(inst->disp_hash[i].func_name, funcName,
+            strncpy(inst->dev_ext_disp_hash[i].func_name, funcName,
                     strlen(funcName) + 1);
             list->index[list->count] = i;
             list->count++;
@@ -3423,15 +3841,15 @@ static bool loader_add_dev_ext_table(struct loader_instance *inst,
 static bool loader_name_in_dev_ext_table(struct loader_instance *inst,
                                          uint32_t *idx, const char *funcName) {
     uint32_t alt_idx;
-    if (inst->disp_hash[*idx].func_name &&
-        !strcmp(inst->disp_hash[*idx].func_name, funcName))
+    if (inst->dev_ext_disp_hash[*idx].func_name &&
+        !strcmp(inst->dev_ext_disp_hash[*idx].func_name, funcName))
         return true;
 
     // funcName wasn't at the primary spot in the hash table
     // search the list of secondary locations (shallow search, not deep search)
-    for (uint32_t i = 0; i < inst->disp_hash[*idx].list.count; i++) {
-        alt_idx = inst->disp_hash[*idx].list.index[i];
-        if (!strcmp(inst->disp_hash[*idx].func_name, funcName)) {
+    for (uint32_t i = 0; i < inst->dev_ext_disp_hash[*idx].list.count; i++) {
+        alt_idx = inst->dev_ext_disp_hash[*idx].list.index[i];
+        if (!strcmp(inst->dev_ext_disp_hash[*idx].func_name, funcName)) {
             *idx = alt_idx;
             return true;
         }
@@ -3469,8 +3887,8 @@ void *loader_dev_ext_gpa(struct loader_instance *inst, const char *funcName) {
         return loader_get_dev_ext_trampoline(idx);
 
     // Check if funcName is supported in either ICDs or a layer library
-    if (!loader_check_icds_for_address(inst, funcName) &&
-        !loader_check_layers_for_address(inst, funcName)) {
+    if (!loader_check_icds_for_dev_ext_address(inst, funcName) &&
+        !loader_check_layer_list_for_dev_ext_address(&inst->instance_layer_list, funcName)) {
         // if support found in layers continue on
         return NULL;
     }
@@ -3484,6 +3902,186 @@ void *loader_dev_ext_gpa(struct loader_instance *inst, const char *funcName) {
 
     return NULL;
 }
+
+static void loader_free_phys_dev_ext_table(struct loader_physical_device_tramp *phys_dev) {
+    struct loader_instance* inst = phys_dev->this_instance;
+    uint32_t i;
+    for (i = 0; i < MAX_NUM_DEV_EXTS; i++) {
+        loader_instance_heap_free(inst, inst->phys_dev_ext_disp_hash[i].func_name);
+        loader_instance_heap_free(inst, inst->phys_dev_ext_disp_hash[i].list.index);
+    }
+    memset(inst->phys_dev_ext_disp_hash, 0, sizeof(inst->phys_dev_ext_disp_hash));
+    for (uint32_t i = 0; i < inst->total_icd_count; i++) {
+        memset(inst->icds[i].phys_dev_ext, 0, sizeof(inst->icds[i].phys_dev_ext));
+    }
+}
+
+static bool loader_add_phys_dev_ext_table(struct loader_instance* inst,
+    uint32_t *ptr_idx, const char *funcName) {
+    uint32_t i;
+    uint32_t idx = *ptr_idx;
+    struct loader_dispatch_hash_list *list = &inst->phys_dev_ext_disp_hash[idx].list;
+
+    if (!inst->phys_dev_ext_disp_hash[idx].func_name) {
+        // no entry here at this idx, so use it
+        assert(list->capacity == 0);
+        inst->phys_dev_ext_disp_hash[idx].func_name = (char *)loader_instance_heap_alloc(
+            inst, strlen(funcName) + 1, VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+        if (inst->phys_dev_ext_disp_hash[idx].func_name == NULL) {
+            loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                "loader_add_phys_dev_ext_table() can't allocate memory for "
+                "func_name");
+            return false;
+        }
+        strncpy(inst->phys_dev_ext_disp_hash[idx].func_name, funcName, strlen(funcName) + 1);
+        return true;
+    }
+
+    // check for enough capacity
+    if (list->capacity == 0) {
+        list->index = loader_instance_heap_alloc(inst, 8 * sizeof(*(list->index)),
+            VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+        if (list->index == NULL) {
+            loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                "loader_add_phys_dev_ext_table() can't allocate list memory");
+            return false;
+        }
+        list->capacity = 8 * sizeof(*(list->index));
+    } else if (list->capacity < (list->count + 1) * sizeof(*(list->index))) {
+        list->index = loader_instance_heap_realloc(inst, list->index, list->capacity,
+            list->capacity * 2,
+            VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+        if (list->index == NULL) {
+            loader_log(
+                inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                "loader_add_phys_dev_ext_table() can't reallocate list memory");
+            return false;
+        }
+        list->capacity *= 2;
+    }
+
+    // find an unused index in the hash table and use it
+    i = (idx + 1) % MAX_NUM_DEV_EXTS;
+    do {
+        if (!inst->phys_dev_ext_disp_hash[i].func_name) {
+            assert(inst->phys_dev_ext_disp_hash[i].list.capacity == 0);
+            inst->phys_dev_ext_disp_hash[i].func_name =
+                (char *)loader_instance_heap_alloc(inst, strlen(funcName) + 1,
+                    VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+            if (inst->phys_dev_ext_disp_hash[i].func_name == NULL) {
+                loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                    "loader_add_dev_ext_table() can't rallocate "
+                    "func_name memory");
+                return false;
+            }
+            strncpy(inst->phys_dev_ext_disp_hash[i].func_name, funcName,
+                strlen(funcName) + 1);
+            list->index[list->count] = i;
+            list->count++;
+            *ptr_idx = i;
+            return true;
+        }
+        i = (i + 1) % MAX_NUM_DEV_EXTS;
+    } while (i != idx);
+
+    loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+        "loader_add_phys_dev_ext_table() couldn't insert into hash table; is "
+        "it full?");
+    return false;
+}
+
+static bool loader_name_in_phys_dev_ext_table(struct loader_instance* inst,
+    uint32_t *idx, const char *funcName) {
+    uint32_t alt_idx;
+    if (inst->phys_dev_ext_disp_hash[*idx].func_name &&
+        !strcmp(inst->phys_dev_ext_disp_hash[*idx].func_name, funcName))
+        return true;
+
+    // funcName wasn't at the primary spot in the hash table
+    // search the list of secondary locations (shallow search, not deep search)
+    for (uint32_t i = 0; i < inst->phys_dev_ext_disp_hash[*idx].list.count; i++) {
+        alt_idx = inst->phys_dev_ext_disp_hash[*idx].list.index[i];
+        if (!strcmp(inst->phys_dev_ext_disp_hash[*idx].func_name, funcName)) {
+            *idx = alt_idx;
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
+* This function returns generic trampoline code address for unknown entry
+* points.  Presumably, these unknown entry points (as given by funcName)
+* are physical device extension entrypoints.  A hash table is used to keep
+* a list of unknown entry points and their mapping to the physical device
+* extension dispatch table (struct loader_phys_dev_ext_dispatch_table).
+* \returns
+* For a given entry point string (funcName), if an existing mapping is
+* found the trampoline address for that mapping is returned. Otherwise,
+* this unknown entry point has not been seen yet. Next check if a layer or
+* ICD supports it.  If so then a new entry in the hash table is
+* initialized and that trampoline address for the new entry is returned.
+* Null is returned if the hash table is full or if no discovered layer or
+* ICD returns a non-NULL GetProcAddr for it.
+*/
+bool loader_phys_dev_ext_gpa(struct loader_instance *inst,
+                              const char *funcName, void **addr) {
+    uint32_t idx;
+    uint32_t seed = 0;
+    bool success = false;
+
+    if (addr == NULL || inst == NULL) {
+        goto out;
+    }
+
+    *addr = NULL;
+    if (!loader_check_icds_for_inst_ext_address(inst, funcName) &&
+        !loader_check_layer_list_for_inst_ext_address(&inst->instance_layer_list, funcName)) {
+        // No ICD or layer supports this entry-point name
+        goto out;
+    }
+
+    idx = murmurhash(funcName, strlen(funcName), seed) % MAX_NUM_DEV_EXTS;
+
+    if (loader_name_in_phys_dev_ext_table(inst, &idx, funcName)) {
+        // FuncName already in hash
+        *addr = loader_get_phys_dev_ext_termin(idx);
+    } else {
+        uint32_t i;
+        bool added = false;
+        for (i = 0; i < inst->total_gpu_count; i++) {
+            struct loader_physical_device *phys_dev_term = &inst->phys_devs_term[i];
+            struct loader_icd *icd = phys_dev_term->this_icd;
+        
+            if (NULL != icd) {
+                // Only need to add first one to get index in Instance.  Others will use
+                // the same index.
+                if (!added && loader_add_phys_dev_ext_table(inst, &idx, funcName)) {
+                    added = true;
+                }
+                *addr = loader_get_phys_dev_ext_termin(idx);
+                icd->phys_dev_ext[idx] = (PFN_PhysDevExt)icd->this_icd_lib->GetInstanceProcAddr(icd->instance, funcName);
+            }
+        }
+
+        // Now, search for the first layer attached and query using it to get the first entry point.
+        for (i = 0; i < inst->activated_layer_list.count; i++) {
+            struct loader_layer_properties *layer_prop =
+                &inst->activated_layer_list.list[i];
+            if (NULL != layer_prop->functions.get_instance_proc_addr) {
+                *addr = (PFN_PhysDevExt)layer_prop->functions.get_instance_proc_addr((VkInstance)inst, funcName);
+                break;
+            }
+        }
+    }
+
+    success = true;
+
+out:
+    return success;
+}
+
 
 struct loader_instance *loader_get_instance(const VkInstance instance) {
     /* look up the loader_instance in our list by comparing dispatch tables, as
@@ -3569,9 +4167,11 @@ loader_add_layer_implicit(const struct loader_instance *inst,
                 enable = true;
             } else {
                 env_value = loader_getenv(prop->enable_env_var.name, inst);
-                if (env_value && !strcmp(prop->enable_env_var.value, env_value))
-                    enable = true;
-                loader_free_getenv(env_value, inst);
+                if (env_value) {
+                    if (strcmp(prop->enable_env_var.value, env_value))
+                        enable = true;
+                    loader_free_getenv(env_value, inst);
+                }
             }
 
             // disable_environment has priority, i.e. if both enable and disable
@@ -3581,8 +4181,8 @@ loader_add_layer_implicit(const struct loader_instance *inst,
             env_value = loader_getenv(prop->disable_env_var.name, inst);
             if (env_value) {
                 enable = false;
+                loader_free_getenv(env_value, inst);
             }
-            loader_free_getenv(env_value, inst);
 
             if (enable) {
                 loader_add_to_layer_list(inst, list, 1, prop);
@@ -3962,7 +4562,7 @@ VkResult loader_validate_layers(const struct loader_instance *inst,
 
 VkResult loader_validate_instance_extensions(
     const struct loader_instance *inst,
-    const struct loader_extension_list *icd_exts,
+    const struct loader_extension_entry_list *icd_exts,
     const struct loader_layer_list *instance_layer,
     const VkInstanceCreateInfo *pCreateInfo) {
 
@@ -3979,8 +4579,7 @@ VkResult loader_validate_instance_extensions(
             return VK_ERROR_EXTENSION_NOT_PRESENT;
         }
 
-        extension_prop = get_extension_property(
-            pCreateInfo->ppEnabledExtensionNames[i], icd_exts);
+        extension_prop = get_extension_property(pCreateInfo->ppEnabledExtensionNames[i], icd_exts);
 
         if (extension_prop) {
             continue;
@@ -4021,7 +4620,7 @@ VkResult loader_validate_instance_extensions(
 VkResult loader_validate_device_extensions(
     struct loader_physical_device_tramp *phys_dev,
     const struct loader_layer_list *activated_device_layers,
-    const struct loader_extension_list *icd_exts,
+    const struct loader_extension_entry_list *icd_exts,
     const VkDeviceCreateInfo *pCreateInfo) {
     VkExtensionProperties *extension_prop;
     struct loader_layer_properties *layer_prop;
@@ -4048,7 +4647,7 @@ VkResult loader_validate_device_extensions(
         for (uint32_t j = 0; j < activated_device_layers->count; j++) {
             layer_prop = &activated_device_layers->list[j];
 
-            extension_prop = get_dev_extension_property(
+            extension_prop = get_extension_property(
                 extension_name, &layer_prop->device_extension_list);
             if (extension_prop) {
                 /* Found the extension in one of the layers enabled by the app.
@@ -4102,14 +4701,14 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateInstance(
         (const char *const *)filtered_extension_names;
 
     for (uint32_t i = 0; i < ptr_instance->icd_libs.count; i++) {
+        bool success = false;
         icd = loader_icd_add(ptr_instance, &ptr_instance->icd_libs.list[i]);
         if (NULL == icd) {
             res = VK_ERROR_OUT_OF_HOST_MEMORY;
             goto out;
         }
         icd_create_info.enabledExtensionCount = 0;
-        struct loader_extension_list icd_exts;
-
+        struct loader_extension_entry_list icd_exts;
         loader_log(ptr_instance, VK_DEBUG_REPORT_DEBUG_BIT_EXT, 0,
                    "Build ICD instance extension list");
         // traverse scanned icd list adding non-duplicate extensions to the
@@ -4148,8 +4747,7 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateInstance(
             }
         }
 
-        loader_destroy_generic_list(ptr_instance,
-                                    (struct loader_generic_list *)&icd_exts);
+        loader_destroy_ext_entry_list(ptr_instance, &icd_exts);
 
         res = ptr_instance->icd_libs.list[i].CreateInstance(
             &icd_create_info, pAllocator, &(icd->instance));
@@ -4193,6 +4791,13 @@ out:
             }
             loader_icd_destroy(ptr_instance, icd, pAllocator);
         }
+    } else if (NULL == ptr_instance->icds) {
+        /*
+        * If no ICDs were added to instance list and res is unchanged
+        * from it's initial value, the loader was unable to find
+        * a suitable ICD.
+        */
+        res = VK_ERROR_INCOMPATIBLE_DRIVER;
     }
 
     return res;
@@ -4234,8 +4839,7 @@ VKAPI_ATTR void VKAPI_CALL terminator_DestroyInstance(
     loader_delete_layer_properties(ptr_instance,
                                    &ptr_instance->instance_layer_list);
     loader_scanned_icd_clear(ptr_instance, &ptr_instance->icd_libs);
-    loader_destroy_generic_list(
-        ptr_instance, (struct loader_generic_list *)&ptr_instance->ext_list);
+    loader_destroy_ext_entry_list(ptr_instance, &ptr_instance->ext_list);
     if (ptr_instance->phys_devs_term)
         loader_instance_heap_free(ptr_instance, ptr_instance->phys_devs_term);
     loader_free_dev_ext_table(ptr_instance);
@@ -4250,7 +4854,7 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateDevice(
 
     struct loader_device *dev = (struct loader_device *)*pDevice;
     PFN_vkCreateDevice fpCreateDevice = phys_dev->this_icd->CreateDevice;
-    struct loader_extension_list icd_exts;
+    struct loader_extension_entry_list icd_exts;
 
     icd_exts.list = NULL;
 
@@ -4331,8 +4935,7 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateDevice(
 
 out:
     if (NULL != icd_exts.list) {
-        loader_destroy_generic_list(phys_dev->this_icd->this_instance,
-                                    (struct loader_generic_list *)&icd_exts);
+        loader_destroy_ext_entry_list(phys_dev->this_icd->this_instance, &icd_exts);
     }
 
     return res;
@@ -4525,8 +5128,8 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_EnumerateDeviceExtensionProperties(
     struct loader_physical_device *phys_dev;
 
     struct loader_layer_list implicit_layer_list = {0};
-    struct loader_extension_list all_exts = {0};
-    struct loader_extension_list icd_exts = {0};
+    struct loader_extension_entry_list all_exts = {0};
+    struct loader_extension_entry_list icd_exts = {0};
 
     assert(pLayerName == NULL || strlen(pLayerName) == 0);
 
@@ -4573,8 +5176,11 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_EnumerateDeviceExtensionProperties(
          * it depends on results of environment variables (which can
          * change).
          */
-        res = loader_add_to_ext_list(icd->this_instance, &all_exts,
-                                     icd_exts.count, icd_exts.list);
+        for (uint32_t i = 0; i < icd_exts.count; i++) {
+            res = loader_add_to_ext_list(icd->this_instance, &all_exts, 1,
+                                         &icd_exts.list[i].props);
+        }
+
         if (res != VK_SUCCESS) {
             goto out;
         }
@@ -4600,7 +5206,7 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_EnumerateDeviceExtensionProperties(
         VkExtensionProperties *props = pProperties;
 
         for (uint32_t i = 0; i < all_exts.count && i < capacity; i++) {
-            props[i] = all_exts.list[i];
+            props[i] = all_exts.list[i].props;
         }
         /* wasn't enough space for the extensions, we did partial copy now
          * return VK_INCOMPLETE */
@@ -4682,4 +5288,3511 @@ VkStringErrorFlags vk_string_validate(const int max_length, const char *utf8) {
         }
     }
     return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin0(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[0]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[0](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin1(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[1]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[1](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin2(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[2]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[2](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin3(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[3]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[3](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin4(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[4]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[4](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin5(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[5]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[5](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin6(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[6]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[6](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin7(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[7]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[7](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin8(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[8]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[8](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin9(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[9]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[9](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin10(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[10]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[10](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin11(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[11]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[11](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin12(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[12]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[12](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin13(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[13]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[13](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin14(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[14]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[14](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin15(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[15]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[15](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin16(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[16]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[16](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin17(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[17]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[17](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin18(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[18]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[18](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin19(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[19]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[19](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin20(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[20]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[20](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin21(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[21]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[21](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin22(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[22]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[22](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin23(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[23]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[23](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin24(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[24]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[24](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin25(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[25]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[25](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin26(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[26]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[26](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin27(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[27]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[27](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin28(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[28]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[28](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin29(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[29]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[29](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin30(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[30]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[30](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin31(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[31]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[31](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin32(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[32]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[32](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin33(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[33]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[33](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin34(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[34]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[34](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin35(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[35]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[35](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin36(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[36]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[36](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin37(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[37]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[37](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin38(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[38]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[38](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin39(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[39]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[39](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin40(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[40]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[40](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin41(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[41]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[41](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin42(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[42]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[42](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin43(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[43]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[43](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin44(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[44]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[44](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin45(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[45]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[45](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin46(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[46]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[46](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin47(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[47]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[47](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin48(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[48]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[48](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin49(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[49]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[49](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin50(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[50]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[50](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin51(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[51]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[51](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin52(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[52]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[52](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin53(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[53]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[53](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin54(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[54]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[54](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin55(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[55]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[55](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin56(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[56]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[56](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin57(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[57]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[57](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin58(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[58]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[58](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin59(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[59]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[59](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin60(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[60]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[60](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin61(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[61]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[61](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin62(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[62]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[62](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin63(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[63]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[63](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin64(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[64]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[64](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin65(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[65]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[65](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin66(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[66]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[66](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin67(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[67]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[67](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin68(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[68]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[68](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin69(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[69]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[69](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin70(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[70]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[70](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin71(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[71]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[71](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin72(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[72]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[72](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin73(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[73]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[73](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin74(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[74]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[74](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin75(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[75]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[75](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin76(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[76]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[76](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin77(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[77]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[77](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin78(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[78]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[78](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin79(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[79]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[79](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin80(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[80]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[80](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin81(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[81]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[81](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin82(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[82]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[82](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin83(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[83]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[83](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin84(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[84]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[84](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin85(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[85]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[85](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin86(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[86]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[86](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin87(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[87]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[87](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin88(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[88]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[88](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin89(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[89]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[89](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin90(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[90]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[90](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin91(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[91]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[91](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin92(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[92]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[92](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin93(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[93]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[93](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin94(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[94]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[94](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin95(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[95]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[95](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin96(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[96]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[96](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin97(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[97]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[97](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin98(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[98]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[98](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin99(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[99]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[99](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin100(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[100]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[100](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin101(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[101]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[101](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin102(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[102]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[102](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin103(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[103]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[103](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin104(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[104]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[104](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin105(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[105]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[105](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin106(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[106]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[106](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin107(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[107]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[107](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin108(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[108]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[108](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin109(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[109]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[109](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin110(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[110]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[110](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin111(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[111]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[111](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin112(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[112]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[112](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin113(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[113]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[113](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin114(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[114]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[114](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin115(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[115]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[115](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin116(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[116]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[116](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin117(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[117]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[117](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin118(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[118]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[118](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin119(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[119]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[119](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin120(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[120]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[120](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin121(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[121]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[121](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin122(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[122]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[122](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin123(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[123]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[123](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin124(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[124]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[124](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin125(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[125]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[125](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin126(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[126]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[126](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin127(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[127]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[127](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin128(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[128]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[128](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin129(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[129]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[129](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin130(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[130]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[130](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin131(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[131]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[131](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin132(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[132]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[132](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin133(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[133]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[133](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin134(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[134]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[134](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin135(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[135]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[135](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin136(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[136]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[136](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin137(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[137]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[137](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin138(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[138]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[138](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin139(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[139]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[139](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin140(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[140]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[140](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin141(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[141]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[141](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin142(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[142]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[142](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin143(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[143]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[143](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin144(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[144]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[144](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin145(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[145]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[145](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin146(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[146]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[146](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin147(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[147]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[147](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin148(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[148]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[148](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin149(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[149]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[149](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin150(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[150]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[150](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin151(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[151]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[151](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin152(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[152]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[152](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin153(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[153]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[153](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin154(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[154]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[154](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin155(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[155]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[155](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin156(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[156]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[156](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin157(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[157]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[157](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin158(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[158]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[158](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin159(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[159]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[159](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin160(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[160]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[160](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin161(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[161]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[161](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin162(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[162]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[162](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin163(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[163]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[163](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin164(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[164]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[164](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin165(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[165]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[165](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin166(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[166]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[166](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin167(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[167]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[167](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin168(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[168]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[168](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin169(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[169]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[169](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin170(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[170]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[170](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin171(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[171]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[171](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin172(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[172]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[172](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin173(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[173]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[173](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin174(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[174]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[174](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin175(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[175]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[175](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin176(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[176]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[176](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin177(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[177]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[177](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin178(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[178]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[178](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin179(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[179]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[179](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin180(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[180]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[180](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin181(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[181]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[181](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin182(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[182]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[182](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin183(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[183]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[183](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin184(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[184]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[184](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin185(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[185]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[185](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin186(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[186]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[186](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin187(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[187]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[187](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin188(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[188]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[188](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin189(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[189]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[189](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin190(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[190]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[190](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin191(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[191]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[191](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin192(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[192]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[192](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin193(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[193]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[193](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin194(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[194]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[194](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin195(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[195]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[195](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin196(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[196]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[196](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin197(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[197]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[197](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin198(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[198]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[198](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin199(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[199]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[199](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin200(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[200]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[200](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin201(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[201]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[201](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin202(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[202]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[202](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin203(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[203]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[203](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin204(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[204]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[204](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin205(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[205]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[205](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin206(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[206]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[206](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin207(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[207]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[207](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin208(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[208]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[208](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin209(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[209]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[209](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin210(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[210]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[210](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin211(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[211]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[211](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin212(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[212]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[212](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin213(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[213]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[213](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin214(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[214]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[214](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin215(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[215]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[215](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin216(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[216]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[216](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin217(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[217]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[217](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin218(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[218]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[218](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin219(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[219]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[219](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin220(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[220]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[220](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin221(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[221]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[221](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin222(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[222]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[222](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin223(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[223]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[223](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin224(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[224]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[224](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin225(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[225]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[225](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin226(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[226]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[226](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin227(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[227]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[227](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin228(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[228]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[228](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin229(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[229]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[229](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin230(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[230]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[230](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin231(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[231]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[231](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin232(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[232]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[232](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin233(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[233]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[233](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin234(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[234]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[234](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin235(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[235]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[235](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin236(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[236]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[236](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin237(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[237]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[237](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin238(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[238]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[238](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin239(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[239]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[239](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin240(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[240]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[240](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin241(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[241]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[241](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin242(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[242]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[242](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin243(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[243]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[243](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin244(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[244]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[244](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin245(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[245]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[245](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin246(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[246]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[246](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin247(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[247]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[247](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin248(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[248]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[248](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkPhysDevExtTermin249(VkPhysicalDevice phys_device, ...) {
+    VkResult result = VK_SUCCESS;
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *)phys_device;
+    if (NULL != phys_dev->this_icd &&
+        NULL != phys_dev->this_icd->phys_dev_ext[249]) {
+        va_list ap;
+        va_start (ap, phys_device);
+        result = phys_dev->this_icd->phys_dev_ext[249](phys_dev->phys_dev, ap);
+        va_end(ap);
+    }
+    return result;
+}
+
+void *loader_get_phys_dev_ext_termin(uint32_t index) {
+    switch (index) {
+    case 0: return vkPhysDevExtTermin0;
+    case 1: return vkPhysDevExtTermin1;
+    case 2: return vkPhysDevExtTermin2;
+    case 3: return vkPhysDevExtTermin3;
+    case 4: return vkPhysDevExtTermin4;
+    case 5: return vkPhysDevExtTermin5;
+    case 6: return vkPhysDevExtTermin6;
+    case 7: return vkPhysDevExtTermin7;
+    case 8: return vkPhysDevExtTermin8;
+    case 9: return vkPhysDevExtTermin9;
+    case 10: return vkPhysDevExtTermin10;
+    case 11: return vkPhysDevExtTermin11;
+    case 12: return vkPhysDevExtTermin12;
+    case 13: return vkPhysDevExtTermin13;
+    case 14: return vkPhysDevExtTermin14;
+    case 15: return vkPhysDevExtTermin15;
+    case 16: return vkPhysDevExtTermin16;
+    case 17: return vkPhysDevExtTermin17;
+    case 18: return vkPhysDevExtTermin18;
+    case 19: return vkPhysDevExtTermin29;
+    case 20: return vkPhysDevExtTermin20;
+    case 21: return vkPhysDevExtTermin21;
+    case 22: return vkPhysDevExtTermin22;
+    case 23: return vkPhysDevExtTermin23;
+    case 24: return vkPhysDevExtTermin24;
+    case 25: return vkPhysDevExtTermin25;
+    case 26: return vkPhysDevExtTermin26;
+    case 27: return vkPhysDevExtTermin27;
+    case 28: return vkPhysDevExtTermin28;
+    case 29: return vkPhysDevExtTermin29;
+    case 30: return vkPhysDevExtTermin30;
+    case 31: return vkPhysDevExtTermin31;
+    case 32: return vkPhysDevExtTermin32;
+    case 33: return vkPhysDevExtTermin33;
+    case 34: return vkPhysDevExtTermin34;
+    case 35: return vkPhysDevExtTermin35;
+    case 36: return vkPhysDevExtTermin36;
+    case 37: return vkPhysDevExtTermin37;
+    case 38: return vkPhysDevExtTermin38;
+    case 39: return vkPhysDevExtTermin39;
+    case 40: return vkPhysDevExtTermin40;
+    case 41: return vkPhysDevExtTermin41;
+    case 42: return vkPhysDevExtTermin42;
+    case 43: return vkPhysDevExtTermin43;
+    case 44: return vkPhysDevExtTermin44;
+    case 45: return vkPhysDevExtTermin45;
+    case 46: return vkPhysDevExtTermin46;
+    case 47: return vkPhysDevExtTermin47;
+    case 48: return vkPhysDevExtTermin48;
+    case 49: return vkPhysDevExtTermin49;
+    case 50: return vkPhysDevExtTermin50;
+    case 51: return vkPhysDevExtTermin51;
+    case 52: return vkPhysDevExtTermin52;
+    case 53: return vkPhysDevExtTermin53;
+    case 54: return vkPhysDevExtTermin54;
+    case 55: return vkPhysDevExtTermin55;
+    case 56: return vkPhysDevExtTermin56;
+    case 57: return vkPhysDevExtTermin57;
+    case 58: return vkPhysDevExtTermin58;
+    case 59: return vkPhysDevExtTermin59;
+    case 60: return vkPhysDevExtTermin60;
+    case 61: return vkPhysDevExtTermin61;
+    case 62: return vkPhysDevExtTermin62;
+    case 63: return vkPhysDevExtTermin63;
+    case 64: return vkPhysDevExtTermin64;
+    case 65: return vkPhysDevExtTermin65;
+    case 66: return vkPhysDevExtTermin66;
+    case 67: return vkPhysDevExtTermin67;
+    case 68: return vkPhysDevExtTermin68;
+    case 69: return vkPhysDevExtTermin69;
+    case 70: return vkPhysDevExtTermin60;
+    case 71: return vkPhysDevExtTermin71;
+    case 72: return vkPhysDevExtTermin72;
+    case 73: return vkPhysDevExtTermin73;
+    case 74: return vkPhysDevExtTermin74;
+    case 75: return vkPhysDevExtTermin75;
+    case 76: return vkPhysDevExtTermin76;
+    case 77: return vkPhysDevExtTermin77;
+    case 78: return vkPhysDevExtTermin78;
+    case 79: return vkPhysDevExtTermin79;
+    case 80: return vkPhysDevExtTermin80;
+    case 81: return vkPhysDevExtTermin81;
+    case 82: return vkPhysDevExtTermin82;
+    case 83: return vkPhysDevExtTermin83;
+    case 84: return vkPhysDevExtTermin84;
+    case 85: return vkPhysDevExtTermin85;
+    case 86: return vkPhysDevExtTermin86;
+    case 87: return vkPhysDevExtTermin87;
+    case 88: return vkPhysDevExtTermin88;
+    case 89: return vkPhysDevExtTermin89;
+    case 90: return vkPhysDevExtTermin90;
+    case 91: return vkPhysDevExtTermin91;
+    case 92: return vkPhysDevExtTermin92;
+    case 93: return vkPhysDevExtTermin93;
+    case 94: return vkPhysDevExtTermin94;
+    case 95: return vkPhysDevExtTermin95;
+    case 96: return vkPhysDevExtTermin96;
+    case 97: return vkPhysDevExtTermin97;
+    case 98: return vkPhysDevExtTermin98;
+    case 99: return vkPhysDevExtTermin99;
+    case 100: return vkPhysDevExtTermin100;
+    case 101: return vkPhysDevExtTermin101;
+    case 102: return vkPhysDevExtTermin102;
+    case 103: return vkPhysDevExtTermin103;
+    case 104: return vkPhysDevExtTermin104;
+    case 105: return vkPhysDevExtTermin105;
+    case 106: return vkPhysDevExtTermin106;
+    case 107: return vkPhysDevExtTermin107;
+    case 108: return vkPhysDevExtTermin108;
+    case 109: return vkPhysDevExtTermin109;
+    case 110: return vkPhysDevExtTermin110;
+    case 111: return vkPhysDevExtTermin111;
+    case 112: return vkPhysDevExtTermin112;
+    case 113: return vkPhysDevExtTermin113;
+    case 114: return vkPhysDevExtTermin114;
+    case 115: return vkPhysDevExtTermin115;
+    case 116: return vkPhysDevExtTermin116;
+    case 117: return vkPhysDevExtTermin117;
+    case 118: return vkPhysDevExtTermin118;
+    case 119: return vkPhysDevExtTermin129;
+    case 120: return vkPhysDevExtTermin120;
+    case 121: return vkPhysDevExtTermin121;
+    case 122: return vkPhysDevExtTermin122;
+    case 123: return vkPhysDevExtTermin123;
+    case 124: return vkPhysDevExtTermin124;
+    case 125: return vkPhysDevExtTermin125;
+    case 126: return vkPhysDevExtTermin126;
+    case 127: return vkPhysDevExtTermin127;
+    case 128: return vkPhysDevExtTermin128;
+    case 129: return vkPhysDevExtTermin129;
+    case 130: return vkPhysDevExtTermin130;
+    case 131: return vkPhysDevExtTermin131;
+    case 132: return vkPhysDevExtTermin132;
+    case 133: return vkPhysDevExtTermin133;
+    case 134: return vkPhysDevExtTermin134;
+    case 135: return vkPhysDevExtTermin135;
+    case 136: return vkPhysDevExtTermin136;
+    case 137: return vkPhysDevExtTermin137;
+    case 138: return vkPhysDevExtTermin138;
+    case 139: return vkPhysDevExtTermin139;
+    case 140: return vkPhysDevExtTermin140;
+    case 141: return vkPhysDevExtTermin141;
+    case 142: return vkPhysDevExtTermin142;
+    case 143: return vkPhysDevExtTermin143;
+    case 144: return vkPhysDevExtTermin144;
+    case 145: return vkPhysDevExtTermin145;
+    case 146: return vkPhysDevExtTermin146;
+    case 147: return vkPhysDevExtTermin147;
+    case 148: return vkPhysDevExtTermin148;
+    case 149: return vkPhysDevExtTermin149;
+    case 150: return vkPhysDevExtTermin150;
+    case 151: return vkPhysDevExtTermin151;
+    case 152: return vkPhysDevExtTermin152;
+    case 153: return vkPhysDevExtTermin153;
+    case 154: return vkPhysDevExtTermin154;
+    case 155: return vkPhysDevExtTermin155;
+    case 156: return vkPhysDevExtTermin156;
+    case 157: return vkPhysDevExtTermin157;
+    case 158: return vkPhysDevExtTermin158;
+    case 159: return vkPhysDevExtTermin159;
+    case 160: return vkPhysDevExtTermin160;
+    case 161: return vkPhysDevExtTermin161;
+    case 162: return vkPhysDevExtTermin162;
+    case 163: return vkPhysDevExtTermin163;
+    case 164: return vkPhysDevExtTermin164;
+    case 165: return vkPhysDevExtTermin165;
+    case 166: return vkPhysDevExtTermin166;
+    case 167: return vkPhysDevExtTermin167;
+    case 168: return vkPhysDevExtTermin168;
+    case 169: return vkPhysDevExtTermin169;
+    case 170: return vkPhysDevExtTermin160;
+    case 171: return vkPhysDevExtTermin171;
+    case 172: return vkPhysDevExtTermin172;
+    case 173: return vkPhysDevExtTermin173;
+    case 174: return vkPhysDevExtTermin174;
+    case 175: return vkPhysDevExtTermin175;
+    case 176: return vkPhysDevExtTermin176;
+    case 177: return vkPhysDevExtTermin177;
+    case 178: return vkPhysDevExtTermin178;
+    case 179: return vkPhysDevExtTermin179;
+    case 180: return vkPhysDevExtTermin180;
+    case 181: return vkPhysDevExtTermin181;
+    case 182: return vkPhysDevExtTermin182;
+    case 183: return vkPhysDevExtTermin183;
+    case 184: return vkPhysDevExtTermin184;
+    case 185: return vkPhysDevExtTermin185;
+    case 186: return vkPhysDevExtTermin186;
+    case 187: return vkPhysDevExtTermin187;
+    case 188: return vkPhysDevExtTermin188;
+    case 189: return vkPhysDevExtTermin189;
+    case 190: return vkPhysDevExtTermin190;
+    case 191: return vkPhysDevExtTermin191;
+    case 192: return vkPhysDevExtTermin192;
+    case 193: return vkPhysDevExtTermin193;
+    case 194: return vkPhysDevExtTermin194;
+    case 195: return vkPhysDevExtTermin195;
+    case 196: return vkPhysDevExtTermin196;
+    case 197: return vkPhysDevExtTermin197;
+    case 198: return vkPhysDevExtTermin198;
+    case 199: return vkPhysDevExtTermin199;
+    case 200: return vkPhysDevExtTermin200;
+    case 201: return vkPhysDevExtTermin201;
+    case 202: return vkPhysDevExtTermin202;
+    case 203: return vkPhysDevExtTermin203;
+    case 204: return vkPhysDevExtTermin204;
+    case 205: return vkPhysDevExtTermin205;
+    case 206: return vkPhysDevExtTermin206;
+    case 207: return vkPhysDevExtTermin207;
+    case 208: return vkPhysDevExtTermin208;
+    case 209: return vkPhysDevExtTermin209;
+    case 210: return vkPhysDevExtTermin210;
+    case 211: return vkPhysDevExtTermin211;
+    case 212: return vkPhysDevExtTermin212;
+    case 213: return vkPhysDevExtTermin213;
+    case 214: return vkPhysDevExtTermin214;
+    case 215: return vkPhysDevExtTermin215;
+    case 216: return vkPhysDevExtTermin216;
+    case 217: return vkPhysDevExtTermin217;
+    case 218: return vkPhysDevExtTermin218;
+    case 219: return vkPhysDevExtTermin229;
+    case 220: return vkPhysDevExtTermin220;
+    case 221: return vkPhysDevExtTermin221;
+    case 222: return vkPhysDevExtTermin222;
+    case 223: return vkPhysDevExtTermin223;
+    case 224: return vkPhysDevExtTermin224;
+    case 225: return vkPhysDevExtTermin225;
+    case 226: return vkPhysDevExtTermin226;
+    case 227: return vkPhysDevExtTermin227;
+    case 228: return vkPhysDevExtTermin228;
+    case 229: return vkPhysDevExtTermin229;
+    case 230: return vkPhysDevExtTermin230;
+    case 231: return vkPhysDevExtTermin231;
+    case 232: return vkPhysDevExtTermin232;
+    case 233: return vkPhysDevExtTermin233;
+    case 234: return vkPhysDevExtTermin234;
+    case 235: return vkPhysDevExtTermin235;
+    case 236: return vkPhysDevExtTermin236;
+    case 237: return vkPhysDevExtTermin237;
+    case 238: return vkPhysDevExtTermin238;
+    case 239: return vkPhysDevExtTermin239;
+    case 240: return vkPhysDevExtTermin240;
+    case 241: return vkPhysDevExtTermin241;
+    case 242: return vkPhysDevExtTermin242;
+    case 243: return vkPhysDevExtTermin243;
+    case 244: return vkPhysDevExtTermin244;
+    case 245: return vkPhysDevExtTermin245;
+    case 246: return vkPhysDevExtTermin246;
+    case 247: return vkPhysDevExtTermin247;
+    case 248: return vkPhysDevExtTermin248;
+    case 249: return vkPhysDevExtTermin249;
+    default:
+        return NULL;
+    }
 }

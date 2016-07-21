@@ -2491,6 +2491,7 @@ static void demo_init_vk(struct demo *demo) {
                         VK_EXT_DEBUG_REPORT_EXTENSION_NAME;
                 }
             }
+
             assert(demo->enabled_extension_count < 64);
         }
 
@@ -2672,6 +2673,7 @@ static void demo_init_vk(struct demo *demo) {
         demo->DestroyDebugReportCallback =
             (PFN_vkDestroyDebugReportCallbackEXT)vkGetInstanceProcAddr(
                 demo->inst, "vkDestroyDebugReportCallbackEXT");
+
         if (!demo->CreateDebugReportCallback) {
             ERR_EXIT(
                 "GetProcAddr: Unable to find vkCreateDebugReportCallbackEXT\n",
