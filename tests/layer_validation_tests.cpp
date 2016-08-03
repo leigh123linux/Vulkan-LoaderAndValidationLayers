@@ -14465,6 +14465,9 @@ TEST_F(VkLayerTest, DrawTimeImageMultisampleMismatchWithPipeline) {
     m_errorMonitor->ExpectSuccess();
 
     VkResult err = pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
+    printf("After CreateVKPipeline:\n");
+    m_errorMonitor->VerifyNotFound();
+    m_errorMonitor->ExpectSuccess();
     ASSERT_VK_SUCCESS(err);
 
     BeginCommandBuffer();
