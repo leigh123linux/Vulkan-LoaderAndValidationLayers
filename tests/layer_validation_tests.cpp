@@ -14414,8 +14414,7 @@ TEST_F(VkLayerTest, DrawTimeImageMultisampleMismatchWithPipeline) {
     TEST_DESCRIPTION("Test that an error is produced when a multisampled images "
                      "are consumed via singlesample images types in the shader, or vice versa.");
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         "requires bound image to have multiple samples");
+    m_errorMonitor->ExpectSuccess();
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
@@ -14441,12 +14440,29 @@ TEST_F(VkLayerTest, DrawTimeImageMultisampleMismatchWithPipeline) {
     pipe.AddShader(&fs);
     pipe.AddColorAttachment();
 
+    printf("1!\n");
+    m_errorMonitor->VerifyNotFound();
+    m_errorMonitor->ExpectSuccess();
+
     VkTextureObj texture(m_device, nullptr);
     VkSamplerObj sampler(m_device);
 
+    printf("2!\n");
+    m_errorMonitor->VerifyNotFound();
+    m_errorMonitor->ExpectSuccess();
+
     VkDescriptorSetObj descriptorSet(m_device);
+
+    printf("2a!\n");
+    m_errorMonitor->VerifyNotFound();
+    m_errorMonitor->ExpectSuccess();
+
     descriptorSet.AppendSamplerTexture(&sampler, &texture);
     descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
+
+    printf("3!\n");
+    m_errorMonitor->VerifyNotFound();
+    m_errorMonitor->ExpectSuccess();
 
     VkResult err = pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
     ASSERT_VK_SUCCESS(err);
@@ -14461,6 +14477,10 @@ TEST_F(VkLayerTest, DrawTimeImageMultisampleMismatchWithPipeline) {
     VkRect2D scissor = { { 0, 0 }, { 16, 16 } };
     vkCmdSetScissor(m_commandBuffer->handle(), 0, 1, &scissor);
 
+    printf("4!\n");
+    m_errorMonitor->VerifyNotFound();
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         "requires bound image to have multiple samples");
     // error produced here.
     vkCmdDraw(m_commandBuffer->handle(), 3, 1, 0, 0);
 
