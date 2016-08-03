@@ -656,7 +656,7 @@ void VkImageObj::SetLayout(VkCommandBufferObj *cmd_buf,
             src_mask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
         else
             src_mask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        dst_mask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_TRANSFER_READ_BIT;
+        dst_mask = VK_ACCESS_TRANSFER_READ_BIT;
         break;
 
     case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
@@ -677,7 +677,7 @@ void VkImageObj::SetLayout(VkCommandBufferObj *cmd_buf,
             src_mask = VK_ACCESS_TRANSFER_WRITE_BIT;
         else
             src_mask = VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;
-        dst_mask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_MEMORY_READ_BIT;
+        dst_mask = VK_ACCESS_SHADER_READ_BIT;
         break;
 
     case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
