@@ -874,8 +874,7 @@ VkTextureObj::VkTextureObj(VkDeviceObj *device, uint32_t *colors)
     VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                                  VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
-    stagingImage.init(16, 16, tex_format, VK_IMAGE_USAGE_TRANSFER_DST_BIT |
-                                              VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+    stagingImage.init(16, 16, tex_format, VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
                       VK_IMAGE_TILING_LINEAR, reqs);
     VkSubresourceLayout layout = stagingImage.subresource_layout(
         subresource(VK_IMAGE_ASPECT_COLOR_BIT, 0, 0));
