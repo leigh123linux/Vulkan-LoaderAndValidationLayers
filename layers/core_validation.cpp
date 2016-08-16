@@ -54,13 +54,14 @@
 #if defined(__GNUC__)
 #pragma GCC diagnostic warning "-Wwrite-strings"
 #endif
-#include "vk_struct_size_helper.h"
 #include "core_validation.h"
-#include "vk_layer_table.h"
+#include "spirv-tools/libspirv.h"
 #include "vk_layer_data.h"
 #include "vk_layer_extension_utils.h"
+#include "vk_layer_table.h"
 #include "vk_layer_utils.h"
-#include "spirv-tools/libspirv.h"
+#include "vk_struct_size_helper.h"
+#include "vk_validation_error_messages.h"
 
 #if defined __ANDROID__
 #include <android/log.h>
@@ -9775,6 +9776,27 @@ CmdBeginRenderPass(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo *p
                 }
             }
             if (clear_op_size > pRenderPassBegin->clearValueCount) {
+#if USE_ARRAY_VERSION
+                skip_call |=
+                    log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT,
+                            reinterpret_cast<uint64_t &>(renderPass), __LINE__, validation_errors[0].code, "DS",
+                            "In vkCmdBeginRenderPass() the VkRenderPassBeginInfo struct has a clearValueCount of %u but must "
+                            "be at least %u. Note that the pClearValues array is indexed by attachment number so even if some "
+                            "pClearValues entries between 0 and %u correspond to attachments that aren't cleared they will be "
+                            "ignored. %s",
+                            pRenderPassBegin->clearValueCount, clear_op_size, clear_op_size - 1, validation_errors[0].message);
+#else
+                skip_call |=
+                    log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT,
+                            reinterpret_cast<uint64_t &>(renderPass), __LINE__, VALIDATION_ERROR_1538, "DS",
+                            "In vkCmdBeginRenderPass() the VkRenderPassBeginInfo struct has a clearValueCount of %u but must "
+                            "be at least %u. Note that the pClearValues array is indexed by attachment number so even if some "
+                            "pClearValues entries between 0 and %u correspond to attachments that aren't cleared they will be "
+                            "ignored. %s",
+                            pRenderPassBegin->clearValueCount, clear_op_size, clear_op_size - 1,
+                            validation_error_map[VALIDATION_ERROR_1538]);
+#endif
+#if 0 // Original code
                 skip_call |=
                     log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT,
                             reinterpret_cast<uint64_t &>(renderPass), __LINE__, DRAWSTATE_RENDERPASS_INCOMPATIBLE, "DS",
@@ -9786,6 +9808,7 @@ CmdBeginRenderPass(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo *p
                             "attachments that aren't cleared they will be ignored.",
                             pRenderPassBegin->clearValueCount, clear_op_size, reinterpret_cast<uint64_t &>(renderPass),
                             clear_op_size, clear_op_size - 1);
+#endif
             }
             skip_call |= VerifyRenderAreaBounds(dev_data, pRenderPassBegin);
             skip_call |= VerifyFramebufferAndRenderPassLayouts(dev_data, pCB, pRenderPassBegin);
