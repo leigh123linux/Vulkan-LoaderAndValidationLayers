@@ -14056,6 +14056,11 @@ TEST_F(VkLayerTest, CreatePipelineSimplePositiveImplicitBlock)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
+    if (m_device->phy().features().shaderClipDistance) {
+        printf("Clip distance is supported and enabled on the device; skipping.\n");
+        return;
+    }
+
     char const *vsSource =
         "#version 450\n"
         "void main(){\n"
