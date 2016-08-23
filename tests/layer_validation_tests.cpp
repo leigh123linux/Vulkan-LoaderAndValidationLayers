@@ -14046,6 +14046,46 @@ TEST_F(VkLayerTest, CreatePipelineAttribComponents)
     m_errorMonitor->VerifyNotFound();
 }
 
+TEST_F(VkLayerTest, CreatePipelineSimplePositiveImplicitBlock)
+{
+    TEST_DESCRIPTION("Test that using the implicit declaration of gl_PerVertex "
+                     "doesn't upset the validator as long as we don't touch "
+                     "the gl_ClipDistance etc members");
+    m_errorMonitor->ExpectSuccess();
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    char const *vsSource =
+        "#version 450\n"
+        "void main(){\n"
+        "   gl_Position = vec4(0);\n"
+        "}\n";
+    char const *fsSource =
+        "#version 450\n"
+        "\n"
+        "layout(location=0) out vec4 color;\n"
+        "void main(){\n"
+        "   color = vec4(1);\n"
+        "}\n";
+
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+
+    VkPipelineObj pipe(m_device);
+    pipe.AddColorAttachment();
+    pipe.AddShader(&vs);
+    pipe.AddShader(&fs);
+
+    VkDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.AppendDummy();
+    descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
+
+    pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
+
+    m_errorMonitor->VerifyNotFound();
+}
+
 TEST_F(VkLayerTest, CreatePipelineSimplePositive)
 {
     m_errorMonitor->ExpectSuccess();
