@@ -14021,31 +14021,63 @@ TEST_F(VkLayerTest, ThreadCommandBufferCollision) {
 #endif // THREADING_TESTS
 
 #if SHADER_CHECKER_TESTS
-TEST_F(VkLayerTest, InvalidSPIRVCodeSize) {
+TEST_F(VkLayerTest, InvalidSPIRVModule) {
     TEST_DESCRIPTION("Test that an error is produced for a spirv module "
                      "with an impossible code size");
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         "Invalid SPIR-V header");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
-    VkShaderModule module;
-    VkShaderModuleCreateInfo moduleCreateInfo;
-    struct icd_spv_header spv;
-
+    struct icd_spv_header spv = {};
     spv.magic = ICD_SPV_MAGIC;
     spv.version = ICD_SPV_VERSION;
     spv.gen_magic = 0;
 
+    VkShaderModuleCreateInfo moduleCreateInfo = {};
     moduleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     moduleCreateInfo.pNext = NULL;
     moduleCreateInfo.pCode = (const uint32_t *)&spv;
     moduleCreateInfo.codeSize = 4;
     moduleCreateInfo.flags = 0;
+    VkShaderModule module;
     vkCreateShaderModule(m_device->device(), &moduleCreateInfo, NULL, &module);
 
+}
+
+TEST_F(VkLayerTest, InvalidSPIRVCodeSize) {
+    TEST_DESCRIPTION("Test errors produced for a spirv module "
+                     "with an impossible code size and other "
+                     "similar problems");
+
+    const char *invalid_header_message = "Invalid SPIR-V header";
+    const char *invalid_module_message = "SPIR-V module not valid";
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         invalid_header_message);
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    struct icd_spv_header spv = {};
+    spv.magic = ICD_SPV_MAGIC;
+    spv.version = ICD_SPV_VERSION;
+    spv.gen_magic = 0;
+
+    VkShaderModuleCreateInfo moduleCreateInfo = {};
+    moduleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    moduleCreateInfo.pNext = NULL;
+    moduleCreateInfo.pCode = (const uint32_t *)&spv;
+    moduleCreateInfo.codeSize = 4;
+    moduleCreateInfo.flags = 0;
+    VkShaderModule module;
+    vkCreateShaderModule(m_device->device(), &moduleCreateInfo, NULL, &module);
+
+    m_errorMonitor->VerifyFound();
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         invalid_module_message);
+    vkCreateShaderModule(m_device->device(), &moduleCreateInfo, NULL, &module);
     m_errorMonitor->VerifyFound();
 }
 
