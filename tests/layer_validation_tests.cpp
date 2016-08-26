@@ -14138,6 +14138,52 @@ TEST_F(VkLayerTest, InvalidSPIRVVersion) {
 }
 #endif
 
+TEST_F(VkLayerTest, InvalidShaderStage) {
+    TEST_DESCRIPTION("Test that a warning is produced for a vertex output that "
+                     "is not consumed by the fragment stage");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_FLAG_BITS_MAX_ENUM_EXT,
+                                         "not consumed by fragment shader");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    char const *vsSource =
+            "#version 450\n"
+            "\n"
+            "layout(location=0) out float x;\n"
+            "out gl_PerVertex {\n"
+            "    vec4 gl_Position;\n"
+            "};\n"
+            "void main(){\n"
+            "   gl_Position = vec4(1);\n"
+            "   x = 0;\n"
+            "}\n";
+    char const *fsSource =
+            "#version 450\n"
+            "\n"
+            "layout(location=0) out vec4 color;\n"
+            "void main(){\n"
+            "   color = vec4(1);\n"
+            "}\n";
+
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+
+    VkPipelineObj pipe(m_device);
+    pipe.AddColorAttachment();
+    pipe.AddShader(&vs);
+    pipe.AddShader(&fs);
+
+    VkDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.AppendDummy();
+    descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
+
+    pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
+
+    m_errorMonitor->VerifyFound();
+}
+
+
 TEST_F(VkLayerTest, CreatePipelineVertexOutputNotConsumed) {
     TEST_DESCRIPTION("Test that a warning is produced for a vertex output that "
                      "is not consumed by the fragment stage");
